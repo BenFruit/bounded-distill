@@ -21,9 +21,10 @@ _E5_PREFIX = "query: "  # e5 models expect this prefix for classification-style 
 def default_embed(texts: Sequence[str]) -> npt.NDArray[np.float32]:
     """Embed texts with the default model; the model is downloaded and loaded on first call."""
     model = _load_model(DEFAULT_MODEL)
-    # sentence-transformers annotates `encode` with untyped **kwargs; the selected overload
-    # returns an ndarray, which is converted to a precisely typed array right away.
-    vectors = model.encode(  # pyright: ignore[reportUnknownMemberType]
+    # sentence-transformers annotates `encode` with untyped **kwargs and a bare ndarray return;
+    # with older numpy stubs (numpy < 2.3, Python 3.10) that ndarray is partially unknown.
+    # The result is converted to a precisely typed array right away.
+    vectors = model.encode(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         with_e5_prefix(texts), batch_size=64, convert_to_numpy=True
     )
     return np.asarray(vectors, dtype=np.float32)
