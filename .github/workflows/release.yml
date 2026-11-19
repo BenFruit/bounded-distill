@@ -1,0 +1,46 @@
+name: Release
+
+# Publishes to PyPI when a version tag such as v0.1.0 is pushed. Uses PyPI Trusted Publishing:
+# PyPI trusts this workflow in this repository, so no API token is stored anywhere.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # The environment must match the trusted publisher configured on PyPI.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/bounded-distill/
+    permissions:
+      contents: read
+      id-token: write  # lets PyPI verify that this workflow is the trusted publisher
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+
+      - name: Check that the tag matches the package version
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/bounded_distill/__init__.py)
+          test "v${version}" = "${GITHUB_REF_NAME}" || {
+            echo "tag ${GITHUB_REF_NAME} does not match __version__ ${version}"; exit 1; }
+
+      - name: Run the tests
+        run: |
+          uv sync --locked
+          uv run pytest
+
+      - name: Build and check the package
+        run: |
+          uv build
+          uvx twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
