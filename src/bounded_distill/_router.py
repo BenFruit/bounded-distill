@@ -23,7 +23,7 @@ from bounded_distill._report import (
 )
 from bounded_distill._types import EmbedFn, TrainingData
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2  # 2: one weight set per fold model (1 had a single refit model)
 _LATENCY_SAMPLE = 20  # texts timed one by one for Report.student_latency_ms
 _META_FILE = "router.json"
 _WEIGHTS_FILE = "weights.npz"
@@ -33,13 +33,16 @@ _WEIGHTS_FILE = "weights.npz"
 class Router:
     """A distilled classifier with a calibrated confidence threshold. Built by ``distill()``.
 
-    Inference uses numpy only, so a router does not need scikit-learn objects.
+    It predicts with the average of the fold models' probabilities: the threshold was chosen
+    on those models' out-of-fold confidences, so it means the same on new texts. Inference
+    uses numpy only, so a router does not need scikit-learn objects.
     """
 
     labels: tuple[str, ...]
     threshold: float  # math.inf if the target agreement is unreachable
-    weights: npt.NDArray[np.float64]  # (dim, n_logits): logits = x @ weights + intercept
-    intercept: npt.NDArray[np.float64]  # (n_logits,); n_logits is 1 for two classes
+    # One logistic regression per fold: logits of model k = x @ weights[k] + intercept[k].
+    weights: npt.NDArray[np.float64]  # (n_models, dim, n_logits)
+    intercept: npt.NDArray[np.float64]  # (n_models, n_logits); n_logits is 1 for two classes
     embed: EmbedFn
     embedder: str  # default model name, or "custom"
     target_agreement: float
@@ -153,7 +156,8 @@ class Router:
             intercept = np.asarray(arrays["intercept"], dtype=np.float64)
         labels = tuple(str(label) for label in meta["labels"])
         n_logits = 1 if len(labels) == 2 else len(labels)
-        if weights.ndim != 2 or weights.shape[1] != n_logits or intercept.shape != (n_logits,):
+        n_models = weights.shape[0] if weights.ndim == 3 else 0
+        if n_models == 0 or weights.shape[2] != n_logits or intercept.shape != (n_models, n_logits):
             raise ValueError(
                 f"weights {weights.shape} and intercept {intercept.shape} do not match "
                 f"{len(labels)} labels"
@@ -188,7 +192,10 @@ class Router:
         if not texts:
             return np.zeros((0, len(self.labels)), dtype=np.float64)
         x = embed_texts(self.embed, texts)
-        return proba_from_logits(x @ self.weights + self.intercept)
+        proba = np.zeros((len(texts), len(self.labels)), dtype=np.float64)
+        for weights, intercept in zip(self.weights, self.intercept, strict=True):
+            proba += proba_from_logits(x @ weights + intercept)
+        return proba / len(self.weights)
 
 
 def proba_from_logits(logits: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:

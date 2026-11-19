@@ -93,8 +93,14 @@ Usage contract (README): `if (label := router.predict(text)) is None: label = my
    - choose the **lowest** `t` (maximum coverage) with `lb ≥ target_agreement`;
    - if none qualifies: `threshold = math.inf` (router always returns `None`), the report says
      the target is unreachable, and a `UserWarning` is emitted. No exception.
-6. **Final model**: refit `LogisticRegression` on all valid data; apply the chosen threshold to
-   its confidences at prediction time.
+6. **Prediction model**: the `n_folds` fold models from step 3; probabilities on a new text are
+   their average, and the chosen threshold applies to that average's maximum. No refit on all
+   data: a refit model is more confident than the fold models the threshold was chosen on, so
+   the threshold would mean something else for it. In the benchmark (Banking77, MASSIVE ru,
+   two embedders) a refit model answered 0.5–10 points more test traffic than the report
+   estimated, and fell below the target agreement in 6 of 18 cases; the fold-model average
+   matched the estimated coverage within 1.7 points and missed the target in 4 of 18, all
+   within sampling error. Cost: `n_folds` small weight matrices instead of one.
 7. **Keep for reporting**: out-of-fold confidences/labels (for report and suspects).
 
 ### Wilson one-sided lower bound
@@ -108,12 +114,8 @@ Usage contract (README): `if (label := router.predict(text)) is None: label = my
 - The threshold is selected and evaluated on the same out-of-fold data, so the bound is
   slightly optimistic (selection over many candidates). A separate calibration split may come
   in v0.2 if needed.
-- The threshold is estimated on out-of-fold models but applied to the model refit on all data,
-  which is typically a bit more confident; coverage in production may be slightly higher than
-  reported. The benchmark (Banking77, MASSIVE ru) confirms both effects: test coverage was 3–10
-  points above the estimate, and with the default embedder test agreement was below the
-  target in 5 of 8 cases, by up to 0.6 points. Candidate fix for v0.2: predict with the
-  average of the fold models, whose confidences match the ones the threshold was chosen on.
+- The fold-model average is slightly smoother than a single fold model, so its confidences
+  are close to, not identical with, the out-of-fold ones (see step 6 for measured effects).
 - Agreement with the LLM is not accuracy; systematic LLM errors are learned by the student.
 
 ## 5. Report
@@ -162,8 +164,10 @@ between student and LLM on the answered texts (an independent check of the bound
   Infinity. Training texts and out-of-fold data are never written to disk (they may hold
   private user data); a loaded router predicts, while data-dependent reports are computed
   at `distill()` time.
-- `weights.npz`: logistic regression `weights` (scikit-learn's `coef_` transposed, shape
-  `(dim, n_logits)`, so `logits = x @ weights + intercept`) and `intercept`.
+- `weights.npz`: the fold models' `weights` (each scikit-learn's `coef_` transposed, shape
+  `(n_folds, dim, n_logits)`, so model `k` has `logits = x @ weights[k] + intercept[k]`) and
+  `intercept` `(n_folds, n_logits)`. Format version 2; version 1 (a single refit model) is
+  not read.
 
 Inference uses numpy only (softmax for multiclass, sigmoid for binary), so a loaded router does
 not need scikit-learn objects. `load(path, embed=None)` rebuilds the default embedder by name;
@@ -176,7 +180,7 @@ src/bounded_distill/
   __init__.py      # public exports: distill, Router, Report, ClassStats, Suspect, GoldReport,
                    # EmbedFn, InvalidPolicy
   _types.py        # EmbedFn, InvalidPolicy, TrainingData and other small shared types
-  _sklearn.py      # the only module importing scikit-learn: typed boundary (OOF probas, final fit)
+  _sklearn.py      # the only module importing scikit-learn: typed boundary (cross_fit: OOF probas + fold models)
   _embed.py        # default embedder (lazy sentence-transformers)
   _threshold.py    # wilson_lower_bound, select_threshold — pure functions
   _distill.py      # input validation, out-of-fold training, distill()

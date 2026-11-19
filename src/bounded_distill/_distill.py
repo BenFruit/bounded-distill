@@ -11,7 +11,7 @@ import numpy as np
 from bounded_distill._embed import DEFAULT_MODEL, default_embed, embed_texts
 from bounded_distill._report import format_invalid_counts
 from bounded_distill._router import Router
-from bounded_distill._sklearn import fit_logistic_regression, out_of_fold_proba
+from bounded_distill._sklearn import cross_fit
 from bounded_distill._threshold import select_threshold
 from bounded_distill._types import EmbedFn, InvalidPolicy, InvalidReason, TrainingData
 
@@ -33,7 +33,8 @@ def distill(
     The threshold is the lowest one at which, on out-of-fold predictions, the one-sided
     Wilson lower bound (at ``confidence_level``) of agreement with the LLM is at least
     ``target_agreement``. If no threshold reaches the target, the router never answers
-    (``threshold == math.inf``) and a ``UserWarning`` is emitted.
+    (``threshold == math.inf``) and a ``UserWarning`` is emitted. The router predicts with
+    the average of the ``n_folds`` fold models, the same models the threshold was chosen on.
     """
     check_settings(target_agreement, confidence_level, n_folds, on_invalid)
     data = prepare_training_data(
@@ -44,7 +45,7 @@ def distill(
     class_index = {label: i for i, label in enumerate(data.label_set)}
     y = np.array([class_index[label] for label in data.labels], dtype=np.intp)
 
-    oof_proba = out_of_fold_proba(x, y, len(data.label_set), n_folds, random_state)
+    oof_proba, weights, intercept = cross_fit(x, y, len(data.label_set), n_folds, random_state)
     agrees = oof_proba.argmax(axis=1) == y
     threshold = select_threshold(
         oof_proba.max(axis=1).tolist(), agrees.tolist(), target_agreement, confidence_level
@@ -58,7 +59,6 @@ def distill(
             stacklevel=2,
         )
 
-    weights, intercept = fit_logistic_regression(x, y)
     return Router(
         labels=data.label_set,
         threshold=threshold,

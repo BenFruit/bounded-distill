@@ -73,6 +73,17 @@ def test_binary_router_predicts_both_labels() -> None:
     assert {p for p in binary.predict_batch(new) if p is not None} == {"billing", "tech"}
 
 
+def test_predict_proba_averages_the_fold_models(router: Router) -> None:
+    # Two models that ignore the text: one is sure of "billing", the other of "other".
+    two_models = dataclasses.replace(
+        router,
+        weights=np.zeros((2, router.weights.shape[1], 3)),
+        intercept=np.array([[20.0, 0.0, 0.0], [0.0, 20.0, 0.0]]),
+    )
+    proba = two_models.predict_proba(["billing 1", "tech 2"])
+    np.testing.assert_allclose(proba, [[0.5, 0.5, 0.0]] * 2, atol=1e-6)
+
+
 def test_proba_from_logits_multiclass_is_softmax() -> None:
     logits = np.array([[0.0, 1.0, 2.0]])
     expected = np.exp(logits) / np.exp(logits).sum()

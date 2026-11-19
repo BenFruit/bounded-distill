@@ -84,8 +84,8 @@ def test_binary_labels_use_sklearn_single_logit_layout() -> None:
     router = distill(texts, labels, embed=fake_embed, target_agreement=0.9)
 
     assert router.labels == ("billing", "tech")
-    assert router.weights.shape == (DIM, 1)
-    assert router.intercept.shape == (1,)
+    assert router.weights.shape == (5, DIM, 1)  # one model per fold
+    assert router.intercept.shape == (5, 1)
     assert oof(router).shape == (400, 2)
 
 
@@ -95,7 +95,7 @@ def test_router_keeps_settings_and_marks_custom_embedder() -> None:
 
     assert router.embedder == "custom"
     assert (router.target_agreement, router.confidence_level) == (0.9, 0.8)
-    assert router.weights.shape == (DIM, 3)
+    assert router.weights.shape == (5, DIM, 3)
     assert oof(router).shape == (300, 3)
 
 

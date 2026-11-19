@@ -1,4 +1,4 @@
-"""Our numpy inference must reproduce scikit-learn's predict_proba exactly.
+"""Our numpy inference must reproduce scikit-learn's predict_proba for every fold model.
 
 This file uses scikit-learn directly, so the same relaxed rules as in _sklearn.py apply here.
 """
@@ -8,24 +8,27 @@ This file uses scikit-learn directly, so the same relaxed rules as in _sklearn.p
 
 import numpy as np
 import pytest
-from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold
 
 from bounded_distill._router import proba_from_logits
-from bounded_distill._sklearn import fit_logistic_regression
+from bounded_distill._sklearn import cross_fit
 
 
 @pytest.mark.parametrize("n_classes", [2, 3, 5])
-def test_numpy_probabilities_match_sklearn(n_classes: int) -> None:
+def test_fold_models_reproduce_out_of_fold_probabilities(n_classes: int) -> None:
     rng = np.random.default_rng(n_classes)
     x = rng.normal(size=(300, 6)).astype(np.float32)
     y = rng.integers(n_classes, size=300).astype(np.intp)
     x[np.arange(300), y] += 2.0  # make classes learnable
 
-    model = LogisticRegression(max_iter=1000).fit(x, y)
-    weights, intercept = fit_logistic_regression(x, y)
+    oof, weights, intercepts = cross_fit(x, y, n_classes, n_folds=4, random_state=0)
 
-    ours = proba_from_logits(x @ weights + intercept)
-    # Router math runs in float64 (weights are float64). scikit-learn computes in the dtype of
-    # its input, so it gets float64 input too; with float32 input it differs by ~1e-7.
-    theirs = model.predict_proba(x.astype(np.float64))
-    np.testing.assert_allclose(ours, theirs, rtol=1e-9, atol=1e-12)
+    n_logits = 1 if n_classes == 2 else n_classes
+    assert weights.shape == (4, 6, n_logits)
+    assert intercepts.shape == (4, n_logits)
+    folds = StratifiedKFold(n_splits=4, shuffle=True, random_state=0).split(x, y)
+    for k, (_, held_out) in enumerate(folds):
+        ours = proba_from_logits(x[held_out] @ weights[k] + intercepts[k])
+        # Router math runs in float64; scikit-learn computed the out-of-fold values in the
+        # float32 of its input, which differs by ~1e-7.
+        np.testing.assert_allclose(ours, oof[held_out], atol=1e-6)

@@ -42,7 +42,7 @@ def test_saves_two_files_and_no_training_texts(router: Router, tmp_path: Path) -
 
     assert sorted(p.name for p in directory.iterdir()) == ["router.json", "weights.npz"]
     meta = json.loads((directory / "router.json").read_text(encoding="utf-8"))
-    assert meta["format_version"] == 1
+    assert meta["format_version"] == 2
     assert "billing 0" not in (directory / "router.json").read_text(encoding="utf-8")
 
 

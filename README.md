@@ -164,26 +164,22 @@ At `target_agreement=0.97`:
 
 | Dataset | Embedder | Test traffic without the LLM | Agreement with the LLM on it | Cascade accuracy | LLM alone |
 |---|---|---|---|---|---|
-| Banking77 | multilingual-e5-small (default) | 34.7% | 97.2% | 78.4% | 78.5% |
-| Banking77 | Giga-Embeddings 10B (via `embed=`) | 80.3% | 97.0% | 79.6% | 78.5% |
-| MASSIVE ru | multilingual-e5-small (default) | 32.1% | 96.4% | 83.8% | 83.6% |
-| MASSIVE ru | Giga-Embeddings 10B (via `embed=`) | 71.1% | 97.0% | 84.0% | 83.6% |
+| Banking77 | multilingual-e5-small (default) | 24.9% | 97.3% | 78.4% | 78.5% |
+| Banking77 | Giga-Embeddings 10B (via `embed=`) | 76.1% | 97.7% | 79.3% | 78.5% |
+| MASSIVE ru | multilingual-e5-small (default) | 26.2% | 96.9% | 83.7% | 83.6% |
+| MASSIVE ru | Giga-Embeddings 10B (via `embed=`) | 66.6% | 97.3% | 84.2% | 83.6% |
 
-Median latency of one prediction: 13 ms with e5-small on a laptop CPU, 56 ms with
+Median latency of one prediction: 13 ms with e5-small on a laptop CPU, 55 ms with
 Giga-Embeddings on a GPU server (network included), 117 ms for one call to the LLM.
 
-- **The embedder decides the coverage.** A stronger embedder answers 2–2.5 times more
+- **The report matches new traffic.** Coverage on test is within 1.7 points of the
+  out-of-fold estimate in every case. Agreement on test reaches the target in 14 of 18
+  cases; the four misses (up to 1.1 points, three of them on MASSIVE with e5-small) are all
+  within sampling error: the target stays inside the 95% confidence interval measured on test.
+- **The embedder decides the coverage.** A stronger embedder answers 2.5–3 times more
   traffic at the same target. At 0.97 the cascade is as accurate as the LLM alone with both
   embedders; with Giga-Embeddings it is slightly *more* accurate at every target, because
   averaging over similar texts smooths the teacher's random errors.
-- **The bound is approximate on new traffic.** With Giga-Embeddings, agreement on test
-  reaches the target in 9 of 10 cases and misses it by 0.1 points once. With e5-small it is
-  below the target in 5 of 8 cases, by up to 0.6 points (96.4% at 0.97 on MASSIVE). Each
-  miss is within sampling error, but together they show the bound is somewhat optimistic.
-  A likely reason: the threshold is chosen on out-of-fold models, while the final model is
-  refit on all data and is more confident, so on new texts it answers 3–10 points more
-  traffic than estimated, including less certain texts. Until this is fixed, aim slightly
-  above the agreement you need and check with `evaluate()`.
 - **Suspects find real LLM errors.** With Giga-Embeddings, 75 (Banking77) and 87 (MASSIVE)
   of the top 100 suspects are texts the LLM labeled wrongly, against base rates of 24% and
   16%; in most of them the small model suggests the human label. With e5-small the signal is
@@ -205,7 +201,9 @@ How to reproduce: [benchmarks/README.md](benchmarks/README.md).
 3. For each candidate threshold, count the covered texts and those where the small model
    agrees with the LLM; compute the one-sided Wilson lower bound of agreement.
 4. Pick the lowest threshold (the most coverage) whose bound reaches the target.
-5. Refit on all data. Prediction is one embedding plus a matrix product in numpy.
+5. Predict with the average of the fold models: the same models the threshold was chosen
+   on, so it means the same on new texts. Prediction is one embedding plus a few small
+   matrix products in numpy.
 
 A saved router is a JSON file and a `.npz` file — no pickle, and no training texts on
 disk. The design is described in [HLD/offline_core.md](HLD/offline_core.md).
@@ -225,9 +223,8 @@ bounded-distill focuses on:
 
 - Agreement with the LLM is not accuracy. If the LLM makes the same mistake
   consistently, the small model learns it too. Use a gold set to check.
-- The threshold is chosen and evaluated on the same out-of-fold data and applied to a model
-  refit on all data, so the bound is somewhat optimistic: in the benchmark, agreement on new
-  texts fell up to 0.6 points below the target.
+- The threshold is chosen and evaluated on the same out-of-fold data, so the bound is
+  slightly optimistic; in the benchmark, misses on new texts stayed within sampling error.
 - Single-label classification with a fixed, known set of labels only.
 - When the small model answers, you get only the label, not other fields of your
   pipeline's structured output.
@@ -239,7 +236,6 @@ bounded-distill focuses on:
 - [x] Suspects (confident disagreements)
 - [x] Evaluation against gold labels
 - [x] Benchmark on Banking77 and MASSIVE (Russian) with real LLM labels
-- [ ] Make the bound hold on new traffic as well (see the benchmark)
 - [ ] More teachers in the benchmark
 - [ ] Release 0.1.0 on PyPI
 - [ ] Optional online mode (collect pairs from a running pipeline)
