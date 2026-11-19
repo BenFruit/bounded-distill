@@ -107,6 +107,8 @@ torch = [{ index = "pytorch-cpu" }]
 [tool.uv]
 # `uv sync` installs the benchmark tools too, so pyright can check benchmarks/ locally and in CI.
 default-groups = ["dev", "bench"]
+# The version lives in __init__.py, so a change there must rebuild the installed package.
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/bounded_distill/__init__.py" }]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

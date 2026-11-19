@@ -1,6 +1,6 @@
 # bounded-distill: design of the offline core
 
-This document describes version 0.1.0 and explains why it is built the way it is. It only
+This document describes the 0.1 versions and explains why it is built the way it is. It only
 covers the offline mode, where the LLM labels already exist. An online mode is out of scope.
 
 ## 1. Goal

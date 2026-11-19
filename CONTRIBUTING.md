@@ -42,6 +42,7 @@ CI runs them on the oldest and the newest supported Python (3.10 and 3.14).
   `tests/synthetic.py`; anything that needs the network is marked `@pytest.mark.slow`.
 - Code, comments and docs are in English.
 - Keep pull requests focused: one change per pull request.
+- Update the README and add a line to `CHANGELOG.md` when users would notice the change.
 
 ## Benchmarks
 

@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/assets/logo-dark.svg">
-    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/assets/logo-light.svg" width="350">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/assets/logo-dark.svg">
+    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/assets/logo-light.svg" width="350">
   </picture>
 </p>
 
@@ -18,7 +18,7 @@ Train a small, fast classifier on the labels your LLM already produced, and let 
 only when it agrees with the LLM often enough, with a statistical guarantee. Everything else
 goes back to the LLM.
 
-Status: alpha (0.1.0). It works and is tested and benchmarked, but the API may change before 1.0.
+Status: alpha. It works and is tested and benchmarked, but the API may change before 1.0.
 
 ## Why
 
@@ -163,12 +163,12 @@ The router was trained only on the LLM's labels for the train texts. The human l
 used only at the end, to check the router on test texts it had never seen.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/banking77_dark.png">
-  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/banking77_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_dark.png">
+  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_light.png">
 </picture>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/massive_ru_dark.png">
-  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/massive_ru_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/massive_ru_dark.png">
+  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/massive_ru_light.png">
 </picture>
 
 Note that the y-axes are zoomed in. On these test sets, 0.3 points is about ten texts.
@@ -266,6 +266,7 @@ fallback. This one is different in a few ways:
 ## Contributing
 
 Issues and pull requests are welcome, see [CONTRIBUTING.md](https://github.com/BenFruit/bounded-distill/blob/main/CONTRIBUTING.md).
+Changes between versions are listed in [CHANGELOG.md](https://github.com/BenFruit/bounded-distill/blob/main/CHANGELOG.md).
 
 ## License
 
