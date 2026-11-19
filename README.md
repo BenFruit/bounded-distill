@@ -218,7 +218,8 @@ How to reproduce: [benchmarks/README.md](https://github.com/BenFruit/bounded-dis
    matrix products in numpy.
 
 A saved router is a JSON file and a `.npz` file — no pickle, and no training texts on
-disk. The design is described in [HLD/offline_core.md](https://github.com/BenFruit/bounded-distill/blob/v0.1.0/HLD/offline_core.md).
+disk. The design and the reasons behind it are in
+[docs/design.md](https://github.com/BenFruit/bounded-distill/blob/main/docs/design.md).
 
 ## How it differs from similar tools
 

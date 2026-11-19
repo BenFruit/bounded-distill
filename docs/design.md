@@ -1,7 +1,7 @@
-# bounded-distill — High-Level Design: offline core (v0.1)
+# bounded-distill — design of the offline core
 
-Status: **draft, 2026-11-18** — to be reviewed before implementation.
-Scope of this document: the offline mode only (labels already exist). Online mode is out of scope.
+This document describes version **0.1.0** and the reasons behind its design decisions.
+Scope: the offline mode only (labels already exist). An online mode is out of scope.
 
 ## 1. Goal
 
@@ -158,8 +158,8 @@ between student and LLM on the answered texts (an independent check of the bound
 ## 7. Persistence
 
 `save(path)` writes a directory, no pickle:
-- `router.json`: format version, library version, labels, threshold, settings, embedder
-  model name (or `"custom"`), report.
+- `router.json`: format version, library version, labels, threshold, settings, and the
+  embedder model name (or `"custom"`). No report: it depends on the training data.
 - The threshold `math.inf` (target unreachable) is stored as JSON `null`: strict JSON has no
   Infinity. Training texts and out-of-fold data are never written to disk (they may hold
   private user data); a loaded router predicts, while data-dependent reports are computed
@@ -193,7 +193,9 @@ Small pure functions, no class hierarchies, no extension points.
 ## 9. Dependencies and tooling
 
 - Runtime: `numpy`, `scikit-learn`, `sentence-transformers` (README: install CPU-only torch).
-- Dev: `ruff` (lint + format), `pyright` in strict mode, `pytest`.
+- Dev: `ruff` (lint + format), `pyright` in strict mode, `pytest`; CI on the oldest and newest
+  supported Python. Benchmark scripts (`benchmarks/`, not in the package) use a separate
+  `bench` dependency group: `openai`, `pyarrow`, `matplotlib`.
 - Python ≥ 3.10.
 
 ## 10. Testing
@@ -203,11 +205,20 @@ Small pure functions, no class hierarchies, no extension points.
 - `distill` end-to-end with a **fake deterministic `embed`** (no model download): separable
   synthetic data gives high coverage; noisy labels give lower coverage; input validation errors.
 - Suspects: injected label flips appear at the top.
+- Every fold model's numpy inference matches scikit-learn's `predict_proba`; the router
+  averages the fold models.
 - `save`/`load` round trip gives identical predictions.
 - One slow test with the real default embedder, marked and skipped by default.
 
-## 11. Open questions
+## 11. Decisions on earlier open questions
 
-- Default `confidence_level` 0.95 and `target_agreement` 0.97 — fine as defaults?
-- Minimum covered count for a threshold to be eligible (e.g. `n ≥ 30`)?
-- Expose `n_folds`/`random_state` or keep them internal?
+- **Defaults `target_agreement=0.97`, `confidence_level=0.95`**: kept. They are conservative
+  and the benchmark shows a cascade as accurate as the LLM alone at 0.97.
+- **No separate minimum covered count.** The Wilson bound already demands one: even with
+  every covered text agreeing, the bound reaches 0.90 / 0.95 / 0.97 / 0.99 only from 25 / 52 /
+  88 / 268 covered texts on, at 95% confidence. A second rule would duplicate it.
+- **`n_folds` and `random_state` are keyword arguments.** `n_folds` also sets the number of
+  models the router averages; `random_state` makes runs reproducible.
+
+Open for later versions: per-class thresholds, a separate calibration split against the
+selection optimism (§4), an online mode.
