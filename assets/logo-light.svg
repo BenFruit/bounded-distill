@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="350" height="80" viewBox="0 0 350 80" role="img" aria-label="bounded-distill">
+  <path d="M22 10H11V70H22M58 10H69V70H58" fill="none" stroke="#eb6834" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 18C56 40 54 63 40 63C26 63 24 40 40 18Z" fill="#2a78d6"/>
+  <text x="88" y="52" fill="#0b0b0b" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="600">bounded-distill</text>
+</svg>

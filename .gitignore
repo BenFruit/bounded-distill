@@ -13,9 +13,5 @@ wheels/
 *.skops
 data/
 
-# Private working notes (not for the public repo or the PyPI sdist)
-ClaudeContext/
-CLAUDE.md
-
 # Benchmark downloads and LLM label caches
 benchmarks/.cache/

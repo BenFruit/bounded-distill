@@ -1,9 +1,23 @@
-# bounded-distill
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/assets/logo-dark.svg">
+    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/assets/logo-light.svg" width="350">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/bounded-distill/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bounded-distill?color=blue"></a>
+  <a href="https://pypi.org/project/bounded-distill/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/bounded-distill"></a>
+  <a href="https://github.com/BenFruit/bounded-distill/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/BenFruit/bounded-distill/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/BenFruit/bounded-distill/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-green"></a>
+  <a href="https://microsoft.github.io/pyright/"><img alt="Checked with pyright" src="https://microsoft.github.io/pyright/img/pyright_badge.svg"></a>
+  <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
+</p>
 
 **Distill your LLM classifier into a small, fast model — with a statistical bound on agreement.**
 
-> **Status: alpha.** The offline core works and is tested, but it is not on PyPI yet:
-> version 0.0.1 there is a name placeholder. The API may still change before 0.1.0.
+> **Status: alpha (0.1.0).** The offline core works, is tested and benchmarked. The API may
+> still change before 1.0.
 
 ## The problem
 
@@ -37,10 +51,8 @@ LLM itself.
 
 ## Install
 
-Until the 0.1.0 release, install from a clone of the repository:
-
 ```bash
-pip install .
+pip install bounded-distill
 ```
 
 The default embedder uses `sentence-transformers`, which needs PyTorch. On a machine
@@ -150,12 +162,12 @@ accuracy on test against the human labels.
 evaluate, on test texts the router never saw.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/results/banking77_dark.png">
-  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/banking77_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/banking77_dark.png">
+  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/banking77_light.png">
 </picture>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/results/massive_ru_dark.png">
-  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/massive_ru_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/massive_ru_dark.png">
+  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.0/benchmarks/results/massive_ru_light.png">
 </picture>
 
 The y-axes are zoomed in: on these test sets a difference of 0.3 points is about ten texts.
@@ -192,7 +204,7 @@ and may have been tuned on their training data. The training data of Giga-Embedd
 published, so its numbers may be optimistic. Latencies depend on hardware: the LLM server
 here is fast, so the main saving is GPU compute rather than time. Texts were embedded as they
 are, without the instruction prefix Giga-Embeddings recommends for classification.
-How to reproduce: [benchmarks/README.md](benchmarks/README.md).
+How to reproduce: [benchmarks/README.md](https://github.com/BenFruit/bounded-distill/blob/v0.1.0/benchmarks/README.md).
 
 ## How it works
 
@@ -206,7 +218,7 @@ How to reproduce: [benchmarks/README.md](benchmarks/README.md).
    matrix products in numpy.
 
 A saved router is a JSON file and a `.npz` file — no pickle, and no training texts on
-disk. The design is described in [HLD/offline_core.md](HLD/offline_core.md).
+disk. The design is described in [HLD/offline_core.md](https://github.com/BenFruit/bounded-distill/blob/v0.1.0/HLD/offline_core.md).
 
 ## How it differs from similar tools
 
@@ -242,4 +254,5 @@ bounded-distill focuses on:
 
 ## License
 
-MIT
+Apache License 2.0: see [LICENSE](https://github.com/BenFruit/bounded-distill/blob/v0.1.0/LICENSE) and
+[NOTICE](https://github.com/BenFruit/bounded-distill/blob/v0.1.0/NOTICE).

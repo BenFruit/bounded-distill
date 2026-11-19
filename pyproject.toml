@@ -1,12 +1,12 @@
 [project]
 name = "bounded-distill"
-version = "0.0.1"
+dynamic = ["version"]  # read from src/bounded_distill/__init__.py
 description = "Distill your LLM classifier into a small fast model, with a statistical bound on agreement and LLM fallback for uncertain cases."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Yerassyl Pirzhanov", email = "erasil200270@gmail.com" }]
-license = "MIT"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 keywords = [
     "llm",
     "distillation",
@@ -19,7 +19,7 @@ keywords = [
     "cost-reduction",
 ]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -48,11 +48,15 @@ Issues = "https://github.com/BenFruit/bounded-distill/issues"
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "src/bounded_distill/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/bounded_distill"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/", "README.md", "LICENSE", "pyproject.toml"]
+# Leading slashes anchor the patterns to the project root (benchmarks/README.md stays out).
+include = ["/src/", "/README.md", "/LICENSE", "/NOTICE", "/pyproject.toml"]
 
 [tool.ruff]
 line-length = 100
