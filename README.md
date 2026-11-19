@@ -137,45 +137,62 @@ print(router.evaluate(texts, gold_labels, llm_labels))
 The small model only answers texts it is confident about, which tend to be the easier
 ones, so its accuracy is shown next to the LLM's accuracy **on the same texts**.
 
-## Benchmark: Banking77 with real LLM labels
+## Benchmark: two datasets with real LLM labels
 
-Banking77 has 77 fine-grained intents of online banking queries (10,003 train and 3,080 test
-texts) with human labels. The teacher is **Gemma 4 31B**, self-hosted on vLLM, prompted
-zero-shot with the label names and constrained to answer with one of them. Its labels are
-noisy, as in production: **78.5% accuracy** on test against the human labels.
+Two intent datasets with human labels: **Banking77** (English, 77 fine-grained banking
+intents, 10,003 train and 3,080 test texts) and **MASSIVE** in Russian (59 voice assistant
+intents, 11,510 train and 2,974 test texts). The teacher is **Gemma 4 31B**, self-hosted on
+vLLM, prompted zero-shot with the label names and constrained to answer with one of them.
+Its labels are noisy, as in production: **78.5%** (Banking77) and **83.6%** (MASSIVE)
+accuracy on test against the human labels.
 
 `distill()` is trained on the LLM's train labels only. The human labels are used only to
 evaluate, on test texts the router never saw.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/results/banking77_dark.png">
-  <img alt="Share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/banking77_light.png">
+  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/banking77_light.png">
 </picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/results/massive_ru_dark.png">
+  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/massive_ru_light.png">
+</picture>
+
+The y-axes are zoomed in: on these test sets a difference of 0.3 points is about ten texts.
 
 At `target_agreement=0.97`:
 
-| Embedder | Test traffic without the LLM | Agreement with the LLM on it | Cascade accuracy | Latency per text |
-|---|---|---|---|---|
-| multilingual-e5-small (default, local CPU) | 34.7% | 97.2% | 78.4% | 13 ms |
-| Giga-Embeddings 10B (GPU server, via `embed=`) | 80.3% | 97.0% | 79.6% | 56 ms |
-| *the LLM alone* | 0% | — | 78.5% | 117 ms |
+| Dataset | Embedder | Test traffic without the LLM | Agreement with the LLM on it | Cascade accuracy | LLM alone |
+|---|---|---|---|---|---|
+| Banking77 | multilingual-e5-small (default) | 34.7% | 97.2% | 78.4% | 78.5% |
+| Banking77 | Giga-Embeddings 10B (via `embed=`) | 80.3% | 97.0% | 79.6% | 78.5% |
+| MASSIVE ru | multilingual-e5-small (default) | 32.1% | 96.4% | 83.8% | 83.6% |
+| MASSIVE ru | Giga-Embeddings 10B (via `embed=`) | 71.1% | 97.0% | 84.0% | 83.6% |
 
-- **The promise holds on unseen texts.** Measured agreement on test is at the target for
-  every target with Giga-Embeddings; with e5-small it is 0.2–0.4 points below the target at
-  0.93 and 0.95, within the sampling error of about ±1 point.
-- **Coverage on test is higher than the out-of-fold estimate** (e.g. 34.7% vs 24.7%): the
-  final model is refit on all data and is more confident. The estimate errs on the safe side.
-- **The embedder decides the coverage.** A stronger embedder answers 2–3 times more traffic at
-  the same target, and its cascade is slightly *more* accurate than the LLM alone: averaging
-  over similar texts smooths the teacher's random errors.
-- **Suspects find real LLM errors.** With Giga-Embeddings, 75 of the top 100 suspects are
-  texts the LLM labeled wrongly (3× the 24% base rate), and in two of three the small model
-  suggests the human label. With e5-small the signal is weaker (39 of 100).
-- **About two thirds of the LLM's errors are systematic**: the small model learns them and
-  agrees, so no agreement metric can reveal them. Only a gold set can — see `evaluate()`.
+Median latency of one prediction: 13 ms with e5-small on a laptop CPU, 56 ms with
+Giga-Embeddings on a GPU server (network included), 117 ms for one call to the LLM.
 
-Caveats: one dataset and one teacher so far. Banking77 is part of MTEB, and embedders tuned
-on MTEB training data may have seen it; the training data of Giga-Embeddings is not
+- **The embedder decides the coverage.** A stronger embedder answers 2–2.5 times more
+  traffic at the same target. At 0.97 the cascade is as accurate as the LLM alone with both
+  embedders; with Giga-Embeddings it is slightly *more* accurate at every target, because
+  averaging over similar texts smooths the teacher's random errors.
+- **The bound is approximate on new traffic.** With Giga-Embeddings, agreement on test
+  reaches the target in 9 of 10 cases and misses it by 0.1 points once. With e5-small it is
+  below the target in 5 of 8 cases, by up to 0.6 points (96.4% at 0.97 on MASSIVE). Each
+  miss is within sampling error, but together they show the bound is somewhat optimistic.
+  A likely reason: the threshold is chosen on out-of-fold models, while the final model is
+  refit on all data and is more confident, so on new texts it answers 3–10 points more
+  traffic than estimated, including less certain texts. Until this is fixed, aim slightly
+  above the agreement you need and check with `evaluate()`.
+- **Suspects find real LLM errors.** With Giga-Embeddings, 75 (Banking77) and 87 (MASSIVE)
+  of the top 100 suspects are texts the LLM labeled wrongly, against base rates of 24% and
+  16%; in most of them the small model suggests the human label. With e5-small the signal is
+  weaker (39 and 55 of 100). Some "LLM errors" are errors in the human labels themselves.
+- **40–70% of the LLM's errors are systematic**: the small model learns them and agrees, so
+  no agreement metric can reveal them. Only a gold set can — see `evaluate()`.
+
+Caveats: one teacher so far. Both datasets are MTEB tasks; embedders are evaluated on them
+and may have been tuned on their training data. The training data of Giga-Embeddings is not
 published, so its numbers may be optimistic. Latencies depend on hardware: the LLM server
 here is fast, so the main saving is GPU compute rather than time. Texts were embedded as they
 are, without the instruction prefix Giga-Embeddings recommends for classification.
@@ -208,8 +225,9 @@ bounded-distill focuses on:
 
 - Agreement with the LLM is not accuracy. If the LLM makes the same mistake
   consistently, the small model learns it too. Use a gold set to check.
-- The threshold is chosen and evaluated on the same out-of-fold data, so the bound is
-  slightly optimistic.
+- The threshold is chosen and evaluated on the same out-of-fold data and applied to a model
+  refit on all data, so the bound is somewhat optimistic: in the benchmark, agreement on new
+  texts fell up to 0.6 points below the target.
 - Single-label classification with a fixed, known set of labels only.
 - When the small model answers, you get only the label, not other fields of your
   pipeline's structured output.
@@ -220,8 +238,9 @@ bounded-distill focuses on:
 - [x] Report: coverage, agreement with lower bound, per-class metrics, latency
 - [x] Suspects (confident disagreements)
 - [x] Evaluation against gold labels
-- [x] Benchmark on Banking77 with real LLM labels
-- [ ] More datasets (including non-English) and teachers
+- [x] Benchmark on Banking77 and MASSIVE (Russian) with real LLM labels
+- [ ] Make the bound hold on new traffic as well (see the benchmark)
+- [ ] More teachers in the benchmark
 - [ ] Release 0.1.0 on PyPI
 - [ ] Optional online mode (collect pairs from a running pipeline)
 

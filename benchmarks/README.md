@@ -19,24 +19,28 @@ LLM_API_KEY=...
 ## Steps
 
 ```bash
-# 1. Download Banking77 (pinned revision, SHA-256 checked) and print a summary
+# 1. Download the datasets (pinned revisions, SHA-256 checked) and print a summary
 uv run python -m benchmarks.data
 
 # 2. Label train and test with the LLM (resumable cache; --limit 50 for a quick probe)
-uv run --env-file .env python -m benchmarks.label --split test
-uv run --env-file .env python -m benchmarks.label --split train
+uv run --env-file .env python -m benchmarks.label --dataset banking77 --split test
+uv run --env-file .env python -m benchmarks.label --dataset banking77 --split train
 
 # 3. Distill at targets 0.90-0.99 and evaluate on test against the human labels
-uv run python -m benchmarks.run
-uv run --env-file .env python -m benchmarks.run --embedder giga-embeddings:10b
+uv run python -m benchmarks.run --dataset banking77
+uv run --env-file .env python -m benchmarks.run --dataset banking77 --embedder giga-embeddings:10b
 
 # 4. Compare suspects with the human labels
-uv run python -m benchmarks.suspects
+uv run python -m benchmarks.suspects --dataset banking77
 
 # 5. Latency of one prediction, and the chart
 uv run --env-file .env python -m benchmarks.latency
 uv run python -m benchmarks.chart
 ```
+
+Datasets: `banking77` (Banking77, English, 77 intents) and `massive_ru` (MASSIVE 1.0,
+Russian, 59 intents; the one intent with only 4 train texts is left out). Each script takes
+`--dataset`; the commands above use Banking77.
 
 Downloads, LLM labels and embeddings are cached in `benchmarks/.cache/` (git-ignored).
 Results (metrics only, no texts) are written to `benchmarks/results/`.

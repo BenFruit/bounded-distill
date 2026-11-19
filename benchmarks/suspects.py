@@ -1,4 +1,4 @@
-"""How many of the LLM's labeling errors on Banking77 train do suspects catch?
+"""How many of the LLM's labeling errors on a train split do suspects catch?
 
 An LLM error is a train text whose LLM label differs from gold. Suspects are the texts where
 the out-of-fold student disagrees with the LLM. An error is *inconsistent* if the student
@@ -11,7 +11,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from benchmarks.data import Example, load_banking77
+from benchmarks.data import DATASETS, Dataset, Example
 from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
 from benchmarks.run import embeddings, llm_labels, lookup_embed
 from bounded_distill import Suspect, distill
@@ -39,10 +39,12 @@ def precision_at(suspects: Sequence[Suspect], gold: Sequence[str], top: int) -> 
     )
 
 
-def analyse(train: Sequence[Example], train_llm: Sequence[str | None], embedder: str) -> str:
+def analyse(
+    dataset: Dataset, train: Sequence[Example], train_llm: Sequence[str | None], embedder: str
+) -> str:
     """Train a router on the LLM labels and compare its suspects with the gold labels."""
-    everything = [*train, *load_banking77("test")]
-    embed = lookup_embed(everything, embeddings(everything, embedder))
+    everything = [*train, *dataset.load("test")]
+    embed = lookup_embed(everything, embeddings(dataset.name, everything, embedder))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         router = distill([e.text for e in train], train_llm, embed=embed)
@@ -71,12 +73,14 @@ def analyse(train: Sequence[Example], train_llm: Sequence[str | None], embedder:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare suspects with gold labels.")
+    parser.add_argument("--dataset", choices=list(DATASETS), default="banking77")
     parser.add_argument("--llm", default=DEFAULT_LLM, help="model whose cached labels to use")
     parser.add_argument("--embedder", default=DEFAULT_MODEL)
     args = parser.parse_args()
 
-    train = load_banking77("train")
-    print(analyse(train, llm_labels(args.llm, train), args.embedder))
+    dataset = DATASETS[args.dataset]
+    train = dataset.load("train")
+    print(analyse(dataset, train, llm_labels(args.llm, dataset.name, train), args.embedder))
 
 
 if __name__ == "__main__":

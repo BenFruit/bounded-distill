@@ -7,7 +7,8 @@ endpoint in a ``.env`` file (never committed):
     LLM_BASE_URL=https://your-server/v1
     LLM_API_KEY=...
 
-Then, for example: ``uv run --env-file .env python -m benchmarks.label --split test --limit 50``
+Then, for example:
+``uv run --env-file .env python -m benchmarks.label --dataset banking77 --split test --limit 50``
 """
 
 import argparse
@@ -24,7 +25,7 @@ from typing import cast
 from openai import OpenAI
 from openai.types.shared_params import ResponseFormatJSONSchema
 
-from benchmarks.data import CACHE_DIR, Example, Split, load_banking77
+from benchmarks.data import CACHE_DIR, DATASETS, Example, Split
 
 DEFAULT_MODEL = "gemma-4:31b"
 
@@ -38,10 +39,10 @@ class Labeled:
     raw: str  # the answer as returned, kept for inspecting failures
 
 
-def system_prompt(labels: Sequence[str]) -> str:
+def system_prompt(task: str, labels: Sequence[str]) -> str:
     """A plain zero-shot instruction listing the label names, as a typical pipeline would."""
     return (
-        "You classify customer messages to an online bank by intent. "
+        f"{task} "
         "Choose exactly one intent from this list:\n"
         + "\n".join(labels)
         + '\nAnswer in JSON: {"label": "<intent>"}.'
@@ -77,12 +78,14 @@ def parse_label(raw: str, labels: Sequence[str]) -> str | None:
     return label if isinstance(label, str) and label in labels else None
 
 
-def label_one(client: OpenAI, model: str, labels: Sequence[str], example: Example) -> Labeled:
+def label_one(
+    client: OpenAI, model: str, task: str, labels: Sequence[str], example: Example
+) -> Labeled:
     """Ask the LLM for one text's label, deterministically (temperature 0)."""
     completion = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": system_prompt(labels)},
+            {"role": "system", "content": system_prompt(task, labels)},
             {"role": "user", "content": example.text},
         ],
         response_format=response_format(labels),
@@ -109,6 +112,7 @@ def read_cache(path: Path) -> dict[str, Labeled]:
 def label_all(
     client: OpenAI,
     model: str,
+    task: str,
     labels: Sequence[str],
     examples: Sequence[Example],
     cache: Path,
@@ -125,7 +129,7 @@ def label_all(
     cache.parent.mkdir(parents=True, exist_ok=True)
     failed = 0
     with cache.open("a", encoding="utf-8") as file, ThreadPoolExecutor(workers) as pool:
-        futures = [pool.submit(label_one, client, model, labels, example) for example in todo]
+        futures = [pool.submit(label_one, client, model, task, labels, example) for example in todo]
         for i, future in enumerate(as_completed(futures), start=1):
             try:
                 result = future.result()
@@ -156,7 +160,8 @@ def summary(examples: Sequence[Example], labeled: dict[str, Labeled], seconds: f
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Label Banking77 texts with an LLM.")
+    parser = argparse.ArgumentParser(description="Label benchmark texts with an LLM.")
+    parser.add_argument("--dataset", choices=list(DATASETS), default="banking77")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--split", choices=["train", "test"], default="test")
     parser.add_argument("--limit", type=int, help="label a fixed random sample of this size")
@@ -164,15 +169,21 @@ def main() -> None:
     args = parser.parse_args()
     split: Split = args.split
 
-    examples = load_banking77(split)
-    labels = sorted({example.gold for example in examples})
+    dataset = DATASETS[args.dataset]
+    examples = dataset.load(split)
     if args.limit is not None:
         examples = random.Random(0).sample(examples, args.limit)
 
     client = OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"])
     start = time.perf_counter()
     labeled = label_all(
-        client, args.model, labels, examples, cache_path(args.model, "banking77"), args.workers
+        client,
+        args.model,
+        dataset.task,
+        dataset.labels(),
+        examples,
+        cache_path(args.model, dataset.name),
+        args.workers,
     )
     print(summary(examples, labeled, time.perf_counter() - start))
 

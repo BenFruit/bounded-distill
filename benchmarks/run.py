@@ -1,4 +1,4 @@
-"""Distill LLM labels on Banking77 train and check the routers on test against gold labels.
+"""Distill LLM labels on a dataset's train split and check the routers on test against gold.
 
 For each target agreement, ``distill()`` trains on the LLM's train labels; the router is then
 evaluated on the test texts, which it never saw, with both the gold and the LLM's test labels.
@@ -19,7 +19,7 @@ import numpy as np
 import numpy.typing as npt
 from openai import OpenAI
 
-from benchmarks.data import CACHE_DIR, Example, load_banking77
+from benchmarks.data import CACHE_DIR, DATASETS, Example
 from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
 from benchmarks.label import cache_path, read_cache
 from bounded_distill import GoldReport, distill
@@ -45,13 +45,13 @@ class TargetResult:
     seconds: float
 
 
-def embeddings(examples: Sequence[Example], embedder: str) -> Vectors:
+def embeddings(dataset: str, examples: Sequence[Example], embedder: str) -> Vectors:
     """Vectors for ``examples``, computed once and cached on disk.
 
     ``embedder`` is the library's default model, or the name of an embedding model served by
     the OpenAI-compatible API configured in ``.env``.
     """
-    path = CACHE_DIR / "embeddings" / _slug(embedder) / "banking77.npy"
+    path = CACHE_DIR / "embeddings" / _slug(embedder) / f"{dataset}.npy"
     if path.exists():
         vectors: Vectors = np.load(path)
         if len(vectors) == len(examples):
@@ -75,6 +75,11 @@ def api_embed(model: str, texts: Sequence[str], batch_size: int = 64) -> Vectors
     return np.array(rows, dtype=np.float32)
 
 
+def result_path(dataset: str, llm: str, embedder: str) -> Path:
+    """Where ``main`` writes the results for one dataset, teacher and embedder."""
+    return RESULTS_DIR / f"{dataset}_{_slug(llm)}_{_slug(embedder)}.json"
+
+
 def _slug(name: str) -> str:
     return name.replace("/", "_").replace(":", "_")
 
@@ -89,9 +94,9 @@ def lookup_embed(examples: Sequence[Example], vectors: Vectors) -> EmbedLookup:
     return embed
 
 
-def llm_labels(model: str, examples: Sequence[Example]) -> list[str | None]:
+def llm_labels(model: str, dataset: str, examples: Sequence[Example]) -> list[str | None]:
     """The LLM's label for each example, in order; fails if any example is not labeled yet."""
-    cached = read_cache(cache_path(model, "banking77"))
+    cached = read_cache(cache_path(model, dataset))
     missing = [example.id for example in examples if example.id not in cached]
     if missing:
         raise SystemExit(f"{len(missing)} texts have no LLM label yet, e.g. {missing[0]}")
@@ -152,18 +157,20 @@ def _num(value: float | None, spec: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Distill Banking77 LLM labels and evaluate.")
+    parser = argparse.ArgumentParser(description="Distill LLM labels and evaluate on gold.")
+    parser.add_argument("--dataset", choices=list(DATASETS), default="banking77")
     parser.add_argument("--llm", default=DEFAULT_LLM, help="model whose cached labels to use")
     parser.add_argument(
         "--embedder", default=DEFAULT_MODEL, help="the default model, or an API embedding model"
     )
     args = parser.parse_args()
 
-    train, test = load_banking77("train"), load_banking77("test")
-    train_llm = llm_labels(args.llm, train)
-    test_llm = [label or "" for label in llm_labels(args.llm, test)]  # "" never matches gold
+    dataset = DATASETS[args.dataset]
+    train, test = dataset.load("train"), dataset.load("test")
+    train_llm = llm_labels(args.llm, dataset.name, train)
+    test_llm = [label or "" for label in llm_labels(args.llm, dataset.name, test)]  # never gold
     everything = [*train, *test]
-    embed = lookup_embed(everything, embeddings(everything, args.embedder))
+    embed = lookup_embed(everything, embeddings(dataset.name, everything, args.embedder))
 
     results: list[TargetResult] = []
     for target in TARGETS:
@@ -171,7 +178,7 @@ def main() -> None:
         print(f"target {target:.2f} done in {results[-1].seconds:.0f} s")
 
     print(table(results))
-    out = RESULTS_DIR / f"banking77_{_slug(args.llm)}_{_slug(args.embedder)}.json"
+    out = result_path(dataset.name, args.llm, args.embedder)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps([asdict(r) for r in results], indent=2), encoding="utf-8")
     print(f"saved {out}")

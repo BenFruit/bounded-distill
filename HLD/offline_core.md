@@ -110,7 +110,10 @@ Usage contract (README): `if (label := router.predict(text)) is None: label = my
   in v0.2 if needed.
 - The threshold is estimated on out-of-fold models but applied to the model refit on all data,
   which is typically a bit more confident; coverage in production may be slightly higher than
-  reported.
+  reported. The benchmark (Banking77, MASSIVE ru) confirms both effects: test coverage was 3–10
+  points above the estimate, and with the default embedder test agreement was below the
+  target in 5 of 8 cases, by up to 0.6 points. Candidate fix for v0.2: predict with the
+  average of the fold models, whose confidences match the ones the threshold was chosen on.
 - Agreement with the LLM is not accuracy; systematic LLM errors are learned by the student.
 
 ## 5. Report

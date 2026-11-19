@@ -13,7 +13,7 @@ from collections.abc import Callable, Sequence
 
 from openai import OpenAI
 
-from benchmarks.data import load_banking77
+from benchmarks.data import DATASETS
 from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
 from benchmarks.label import label_one
 from benchmarks.run import Vectors, api_embed, embeddings, llm_labels, lookup_embed
@@ -36,25 +36,30 @@ def median_ms(call: Callable[[str], object], texts: Sequence[str]) -> float:
 
 
 def main() -> None:
-    train, test = load_banking77("train"), load_banking77("test")
+    dataset = DATASETS["banking77"]  # latency barely depends on the dataset
+    train, test = dataset.load("train"), dataset.load("test")
     texts = [example.text for example in test[:: len(test) // N_TEXTS][:N_TEXTS]]
-    labels = sorted({example.gold for example in train})
+    labels = dataset.labels()
     everything = [*train, *test]
 
     def api(texts: Sequence[str]) -> Vectors:
         return api_embed(API_EMBEDDER, texts)
 
     for embedder, live_embed in [(DEFAULT_MODEL, default_embed), (API_EMBEDDER, api)]:
-        cached = lookup_embed(everything, embeddings(everything, embedder))
+        cached = lookup_embed(everything, embeddings(dataset.name, everything, embedder))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            router = distill([e.text for e in train], llm_labels(DEFAULT_LLM, train), embed=cached)
+            router = distill(
+                [e.text for e in train], llm_labels(DEFAULT_LLM, dataset.name, train), embed=cached
+            )
         live = dataclasses.replace(router, embed=live_embed)  # embeds each new text for real
         print(f"router predict, {embedder}: {median_ms(live.predict, texts):.1f} ms")
 
     client = OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"])
     by_text = {example.text: example for example in test}
-    llm_ms = median_ms(lambda text: label_one(client, DEFAULT_LLM, labels, by_text[text]), texts)
+    llm_ms = median_ms(
+        lambda text: label_one(client, DEFAULT_LLM, dataset.task, labels, by_text[text]), texts
+    )
     print(f"LLM call, {DEFAULT_LLM}: {llm_ms:.1f} ms")
 
 

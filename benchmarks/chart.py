@@ -17,12 +17,14 @@ matplotlib.use("Agg")  # files only, no window
 
 import matplotlib.pyplot as plt
 
-from benchmarks.run import RESULTS_DIR
+from benchmarks.data import DATASETS, Dataset
+from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
+from benchmarks.run import RESULTS_DIR, result_path
 
-# (results file suffix, legend name) in a fixed order: the order picks the colors.
+# (embedder, legend name) in a fixed order: the order picks the colors.
 SERIES = (
-    ("intfloat_multilingual-e5-small", "multilingual-e5-small (local CPU)"),
-    ("giga-embeddings_10b", "Giga-Embeddings 10B (GPU server)"),
+    ("intfloat/multilingual-e5-small", "multilingual-e5-small (local CPU)"),
+    ("giga-embeddings:10b", "Giga-Embeddings 10B (GPU server)"),
 )
 
 
@@ -44,22 +46,22 @@ THEMES = (
 )
 
 
-def load(suffix: str) -> list[dict[str, Any]]:
-    path = RESULTS_DIR / f"banking77_gemma-4_31b_{suffix}.json"
+def load(dataset: Dataset, embedder: str) -> list[dict[str, Any]]:
+    path = result_path(dataset.name, DEFAULT_LLM, embedder)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def draw(theme: Theme) -> None:
+def draw(dataset: Dataset, theme: Theme) -> None:
     fig, ax = plt.subplots(figsize=(8, 4.8), dpi=150)
     fig.patch.set_facecolor(theme.surface)
     ax.set_facecolor(theme.surface)
 
-    llm_alone = load(SERIES[0][0])[0]["test"]["llm_accuracy"] * 100
+    llm_alone = load(dataset, SERIES[0][0])[0]["test"]["llm_accuracy"] * 100
     ax.axhline(llm_alone, color=theme.muted, linewidth=1, linestyle=(0, (4, 3)))
     ax.text(1, llm_alone + 0.15, f"LLM alone: {llm_alone:.1f}%", color=theme.muted, fontsize=9)
 
-    for (suffix, name), color in zip(SERIES, theme.series, strict=True):
-        rows = [row for row in load(suffix) if row["threshold"] is not None]
+    for (embedder, name), color in zip(SERIES, theme.series, strict=True):
+        rows = [row for row in load(dataset, embedder) if row["threshold"] is not None]
         x = [row["test"]["coverage"] * 100 for row in rows]
         y = [row["test"]["cascade_accuracy"] * 100 for row in rows]
         ax.plot(
@@ -88,7 +90,7 @@ def draw(theme: Theme) -> None:
     ax.set_xlabel("Test traffic answered without the LLM (%)", color=theme.text)
     ax.set_ylabel("Cascade accuracy vs gold (%)", color=theme.text)
     ax.set_title(
-        "Banking77, teacher Gemma 4 31B (points: target agreement)",
+        f"{dataset.title}, teacher Gemma 4 31B (points: target agreement)",
         color=theme.text,
         fontsize=11,
         loc="left",
@@ -102,12 +104,14 @@ def draw(theme: Theme) -> None:
         text.set_color(theme.text)
 
     fig.tight_layout()
-    out = RESULTS_DIR / f"banking77_{theme.name}.png"
+    out = RESULTS_DIR / f"{dataset.name}_{theme.name}.png"
     fig.savefig(out, facecolor=theme.surface)
     plt.close(fig)
     print(f"saved {out}")
 
 
 if __name__ == "__main__":
-    for theme in THEMES:
-        draw(theme)
+    for dataset in DATASETS.values():
+        if all(result_path(dataset.name, DEFAULT_LLM, e).exists() for e, _ in SERIES):
+            for theme in THEMES:
+                draw(dataset, theme)
