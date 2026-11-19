@@ -137,6 +137,50 @@ print(router.evaluate(texts, gold_labels, llm_labels))
 The small model only answers texts it is confident about, which tend to be the easier
 ones, so its accuracy is shown next to the LLM's accuracy **on the same texts**.
 
+## Benchmark: Banking77 with real LLM labels
+
+Banking77 has 77 fine-grained intents of online banking queries (10,003 train and 3,080 test
+texts) with human labels. The teacher is **Gemma 4 31B**, self-hosted on vLLM, prompted
+zero-shot with the label names and constrained to answer with one of them. Its labels are
+noisy, as in production: **78.5% accuracy** on test against the human labels.
+
+`distill()` is trained on the LLM's train labels only. The human labels are used only to
+evaluate, on test texts the router never saw.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="benchmarks/results/banking77_dark.png">
+  <img alt="Share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="benchmarks/results/banking77_light.png">
+</picture>
+
+At `target_agreement=0.97`:
+
+| Embedder | Test traffic without the LLM | Agreement with the LLM on it | Cascade accuracy | Latency per text |
+|---|---|---|---|---|
+| multilingual-e5-small (default, local CPU) | 34.7% | 97.2% | 78.4% | 13 ms |
+| Giga-Embeddings 10B (GPU server, via `embed=`) | 80.3% | 97.0% | 79.6% | 56 ms |
+| *the LLM alone* | 0% | — | 78.5% | 117 ms |
+
+- **The promise holds on unseen texts.** Measured agreement on test is at the target for
+  every target with Giga-Embeddings; with e5-small it is 0.2–0.4 points below the target at
+  0.93 and 0.95, within the sampling error of about ±1 point.
+- **Coverage on test is higher than the out-of-fold estimate** (e.g. 34.7% vs 24.7%): the
+  final model is refit on all data and is more confident. The estimate errs on the safe side.
+- **The embedder decides the coverage.** A stronger embedder answers 2–3 times more traffic at
+  the same target, and its cascade is slightly *more* accurate than the LLM alone: averaging
+  over similar texts smooths the teacher's random errors.
+- **Suspects find real LLM errors.** With Giga-Embeddings, 75 of the top 100 suspects are
+  texts the LLM labeled wrongly (3× the 24% base rate), and in two of three the small model
+  suggests the human label. With e5-small the signal is weaker (39 of 100).
+- **About two thirds of the LLM's errors are systematic**: the small model learns them and
+  agrees, so no agreement metric can reveal them. Only a gold set can — see `evaluate()`.
+
+Caveats: one dataset and one teacher so far. Banking77 is part of MTEB, and embedders tuned
+on MTEB training data may have seen it; the training data of Giga-Embeddings is not
+published, so its numbers may be optimistic. Latencies depend on hardware: the LLM server
+here is fast, so the main saving is GPU compute rather than time. Texts were embedded as they
+are, without the instruction prefix Giga-Embeddings recommends for classification.
+How to reproduce: [benchmarks/README.md](benchmarks/README.md).
+
 ## How it works
 
 1. Embed the texts with a frozen sentence embedder.
@@ -176,8 +220,9 @@ bounded-distill focuses on:
 - [x] Report: coverage, agreement with lower bound, per-class metrics, latency
 - [x] Suspects (confident disagreements)
 - [x] Evaluation against gold labels
+- [x] Benchmark on Banking77 with real LLM labels
+- [ ] More datasets (including non-English) and teachers
 - [ ] Release 0.1.0 on PyPI
-- [ ] Benchmarks on public datasets with real LLM labels
 - [ ] Optional online mode (collect pairs from a running pipeline)
 
 ## License

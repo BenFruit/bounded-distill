@@ -81,7 +81,7 @@ select = [
 "tests/**" = ["RUF001"]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "benchmarks"]
 typeCheckingMode = "strict"
 # Check against the oldest supported Python, so newer-only syntax or APIs are reported.
 pythonVersion = "3.10"
@@ -100,12 +100,21 @@ markers = ["slow: needs network or a real model; skipped by default"]
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]
 
+[tool.uv]
+# `uv sync` installs the benchmark tools too, so pyright can check benchmarks/ locally and in CI.
+default-groups = ["dev", "bench"]
+
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [dependency-groups]
+bench = [
+    "matplotlib>=3.10.9",
+    "openai>=3.55.1",
+    "pyarrow>=25.0.1",
+]
 dev = [
     "pyright>=1.1.414",
     "pytest>=9.2.0",

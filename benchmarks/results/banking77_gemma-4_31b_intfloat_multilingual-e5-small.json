@@ -1,0 +1,92 @@
+[
+  {
+    "target": 0.9,
+    "threshold": 0.17722168564796448,
+    "train_coverage": 0.6602019394181745,
+    "train_agreement": 0.9061175045427013,
+    "train_agreement_lower": 0.9000465769568492,
+    "test": {
+      "n_texts": 3080,
+      "n_covered": 2281,
+      "coverage": 0.7405844155844156,
+      "llm_accuracy": 0.7853896103896104,
+      "cascade_accuracy": 0.7568181818181818,
+      "student_accuracy_covered": 0.7895659798334064,
+      "llm_accuracy_covered": 0.8281455501972819,
+      "agreement_covered": 0.9061814993423937
+    },
+    "seconds": 6.982110199984163
+  },
+  {
+    "target": 0.93,
+    "threshold": 0.2170206606388092,
+    "train_coverage": 0.546336099170249,
+    "train_agreement": 0.9357731015553522,
+    "train_agreement_lower": 0.930099796065126,
+    "test": {
+      "n_texts": 3080,
+      "n_covered": 2001,
+      "coverage": 0.6496753246753246,
+      "llm_accuracy": 0.7853896103896104,
+      "cascade_accuracy": 0.7659090909090909,
+      "student_accuracy_covered": 0.8125937031484258,
+      "llm_accuracy_covered": 0.8425787106446777,
+      "agreement_covered": 0.9255372313843079
+    },
+    "seconds": 6.1042384000029415
+  },
+  {
+    "target": 0.95,
+    "threshold": 0.25376588106155396,
+    "train_coverage": 0.4479656103169049,
+    "train_agreement": 0.9553671055567954,
+    "train_agreement_lower": 0.9500124003918642,
+    "test": {
+      "n_texts": 3080,
+      "n_covered": 1723,
+      "coverage": 0.5594155844155844,
+      "llm_accuracy": 0.7853896103896104,
+      "cascade_accuracy": 0.7775974025974026,
+      "student_accuracy_covered": 0.8421358096343586,
+      "llm_accuracy_covered": 0.8560650029019152,
+      "agreement_covered": 0.9483459082994776
+    },
+    "seconds": 6.059406999964267
+  },
+  {
+    "target": 0.97,
+    "threshold": 0.36051008105278015,
+    "train_coverage": 0.2467259822053384,
+    "train_agreement": 0.9756888168557536,
+    "train_agreement_lower": 0.9700448231002627,
+    "test": {
+      "n_texts": 3080,
+      "n_covered": 1068,
+      "coverage": 0.34675324675324676,
+      "llm_accuracy": 0.7853896103896104,
+      "cascade_accuracy": 0.7844155844155845,
+      "student_accuracy_covered": 0.8726591760299626,
+      "llm_accuracy_covered": 0.8754681647940075,
+      "agreement_covered": 0.9719101123595506
+    },
+    "seconds": 5.922327600070275
+  },
+  {
+    "target": 0.99,
+    "threshold": null,
+    "train_coverage": 0.0,
+    "train_agreement": null,
+    "train_agreement_lower": 0.0,
+    "test": {
+      "n_texts": 3080,
+      "n_covered": 0,
+      "coverage": 0.0,
+      "llm_accuracy": 0.7853896103896104,
+      "cascade_accuracy": 0.7853896103896104,
+      "student_accuracy_covered": null,
+      "llm_accuracy_covered": null,
+      "agreement_covered": null
+    },
+    "seconds": 5.946639400091954
+  }
+]
