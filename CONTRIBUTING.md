@@ -4,8 +4,8 @@ Thanks for your interest! Bug reports, ideas and pull requests are welcome.
 
 ## Before you start
 
-- **Small fixes** (typos, docs, an obvious bug): open a pull request directly.
-- **Larger changes** (new features, API changes, new dependencies): please open an issue first,
+- Small fixes (typos, docs, an obvious bug): just open a pull request.
+- Larger changes (new features, API changes, new dependencies): please open an issue first,
   so we can agree on the approach before you spend time on it.
 
 The project values simplicity: small pure functions, no speculative abstractions, few
