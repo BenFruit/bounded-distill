@@ -45,7 +45,7 @@ class Router:
     def predict(self, text: str) -> str | None: ...
     def predict_batch(self, texts: Sequence[str]) -> list[str | None]: ...
     def predict_proba(self, texts: Sequence[str]) -> np.ndarray: ...   # (n, n_labels)
-    def report(self, llm_cost_per_call: float | None = None) -> Report: ...
+    def report(self) -> Report: ...
     def suspects(self, top_n: int = 50) -> list[Suspect]: ...
     def evaluate(self, texts: Sequence[str], gold_labels: Sequence[str],
                  llm_labels: Sequence[str]) -> GoldReport: ...
@@ -122,16 +122,25 @@ Usage contract (README): `if (label := router.predict(text)) is None: label = my
 - `per_class` — for each LLM label: support, coverage, agreement on covered.
 - `disagreements` — counts of (LLM label → student label) pairs among covered disagreements
   (points to ambiguous class definitions in the prompt).
-- `student_latency_ms` — median per-text latency of embed + LR, measured on a small sample.
-- `llm_calls_saved` = coverage; `estimated_cost_saved` if `llm_cost_per_call` is given
-  (per 1,000 texts).
+- `n_covered` and `coverage`; coverage is also the share of LLM calls saved (no separate field).
+- `student_latency_ms` — median latency of single `predict()` calls (embed + LR) on up to 20
+  training texts, after one untimed warm-up call (which may load the model).
 
-`Suspect`: `index`, `text`, `llm_label`, `student_label`, `confidence` — from out-of-fold
-predictions where student ≠ LLM, sorted by confidence descending. A review queue only;
-the library never relabels data automatically.
+`report()` and `suspects()` need the in-memory training data, so they work on the router
+returned by `distill()`; on a loaded router they raise `ValueError` with that explanation.
 
-`GoldReport` (from `evaluate`): accuracy vs gold of the LLM, of the student on covered texts,
-and of the cascade (student when confident, otherwise the given LLM label), plus coverage.
+`Suspect`: `index` (position in the texts given to `distill()`, invalid ones included),
+`text`, `llm_label`, `student_label`, `confidence` — from out-of-fold predictions where
+student ≠ LLM, sorted by confidence descending (ties keep the original order), at most
+`top_n`. The threshold is not applied: it is a review queue, not routing. The library never
+relabels data automatically.
+
+`GoldReport` (from `evaluate` on held-out texts with gold labels and the LLM's labels; needs
+no training data, so it works on a loaded router too): `n_texts`, `n_covered`, `coverage`;
+accuracy vs gold of the LLM on all texts, of the cascade (student when confident, otherwise
+the given LLM label), of the student on the texts it answers, and of the LLM on those same
+texts (the student answers the easier texts, so this is the fair comparison); and agreement
+between student and LLM on the answered texts (an independent check of the bound).
 
 ## 6. Default embedder
 
@@ -161,7 +170,8 @@ if the router was saved with a custom `embed`, it must be passed again (else `Va
 
 ```
 src/bounded_distill/
-  __init__.py      # public exports: distill, Router, Report, Suspect, GoldReport, EmbedFn
+  __init__.py      # public exports: distill, Router, Report, ClassStats, Suspect, GoldReport,
+                   # EmbedFn, InvalidPolicy
   _types.py        # EmbedFn, InvalidPolicy, TrainingData and other small shared types
   _sklearn.py      # the only module importing scikit-learn: typed boundary (OOF probas, final fit)
   _embed.py        # default embedder (lazy sentence-transformers)

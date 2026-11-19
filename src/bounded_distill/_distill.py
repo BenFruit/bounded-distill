@@ -9,16 +9,11 @@ from typing import get_args
 import numpy as np
 
 from bounded_distill._embed import DEFAULT_MODEL, default_embed, embed_texts
+from bounded_distill._report import format_invalid_counts
 from bounded_distill._router import Router
 from bounded_distill._sklearn import fit_logistic_regression, out_of_fold_proba
 from bounded_distill._threshold import select_threshold
 from bounded_distill._types import EmbedFn, InvalidPolicy, InvalidReason, TrainingData
-
-_REASON_TEXT: dict[InvalidReason, str] = {
-    "missing": "missing (None)",
-    "empty": "empty",
-    "unknown": "not in labels",
-}
 
 
 def distill(
@@ -110,11 +105,8 @@ def invalid_reason(label: str | None, allowed: Collection[str] | None) -> Invali
 
 def describe_invalid(invalid: dict[InvalidReason, int], n_total: int) -> str:
     """Human-readable summary, e.g. '5 of 100 LLM labels are invalid: 3 missing (None), 2 empty'."""
-    parts = [
-        f"{invalid[reason]} {text}" for reason, text in _REASON_TEXT.items() if reason in invalid
-    ]
     n_invalid = sum(invalid.values())
-    return f"{n_invalid} of {n_total} LLM labels are invalid: {', '.join(parts)}"
+    return f"{n_invalid} of {n_total} LLM labels are invalid: {format_invalid_counts(invalid)}"
 
 
 def prepare_training_data(

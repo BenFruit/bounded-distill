@@ -6,14 +6,27 @@ import pytest
 from synthetic import fake_embed, make_dataset
 
 import bounded_distill
-from bounded_distill import EmbedFn, InvalidPolicy, Router, distill
+from bounded_distill import (
+    ClassStats,
+    EmbedFn,
+    GoldReport,
+    InvalidPolicy,
+    Report,
+    Router,
+    Suspect,
+    distill,
+)
 
 
 def test_public_names() -> None:
     assert sorted(bounded_distill.__all__) == [
+        "ClassStats",
         "EmbedFn",
+        "GoldReport",
         "InvalidPolicy",
+        "Report",
         "Router",
+        "Suspect",
         "__version__",
         "distill",
     ]
@@ -35,6 +48,25 @@ def test_distill_predict_save_load_workflow(tmp_path: Path) -> None:
         if (label := router.predict(text)) is None:
             label = text.split()[0]  # stands in for the user's LLM pipeline
         assert label == (prediction or text.split()[0])
+
+
+def test_report_suspects_evaluate_workflow() -> None:
+    texts, labels = make_dataset(300, flip_rate=0.03)
+    router = distill(texts, labels, target_agreement=0.9, embed=fake_embed)
+    held_out = [f"{c} {i}" for c in ("billing", "tech", "other") for i in range(1000, 1050)]
+    gold = [text.split()[0] for text in held_out]
+
+    report: Report = router.report()
+    stats: tuple[ClassStats, ...] = report.per_class
+    suspects: list[Suspect] = router.suspects(top_n=5)
+    gold_report: GoldReport = router.evaluate(held_out, gold, gold)
+
+    assert report.target_reached
+    assert {s.label for s in stats} == set(router.labels)
+    assert len(suspects) == 5
+    assert gold_report.llm_accuracy == 1.0
+    assert str(report).startswith("bounded-distill report")
+    assert str(gold_report).startswith("bounded-distill evaluation on 150")
 
 
 @pytest.mark.slow

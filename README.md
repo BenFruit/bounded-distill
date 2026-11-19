@@ -2,8 +2,8 @@
 
 **Distill your LLM classifier into a small, fast model — with a statistical bound on agreement.**
 
-> **Status: pre-alpha (planning).** Version 0.0.1 contains no working API yet.
-> This README describes the planned design. Feedback is welcome.
+> **Status: alpha.** The offline core works and is tested, but it is not on PyPI yet:
+> version 0.0.1 there is a name placeholder. The API may still change before 0.1.0.
 
 ## The problem
 
@@ -25,31 +25,129 @@ bounded-distill:
 1. trains a small classifier (frozen sentence embeddings + logistic regression);
 2. picks a confidence threshold so that the **lower confidence bound** of agreement on
    the texts it answers meets your target — not just the point estimate;
-3. reports how much traffic the small model can take over, and the estimated cost and
-   latency savings;
+3. reports how much traffic the small model can take over (the share of LLM calls
+   saved), per-class agreement and the small model's latency;
 4. lists **suspects**: texts where the small model is confident but disagrees with the
    LLM. These are often LLM labeling mistakes and point to ambiguous class definitions
-   in your prompt.
+   in your prompt;
+5. checks accuracy against a small human-labeled (gold) set, if you have one.
 
 Texts below the threshold go back to your own LLM pipeline. The library never calls an
 LLM itself.
 
-## Planned API
+## Install
+
+Until the 0.1.0 release, install from a clone of the repository:
+
+```bash
+pip install .
+```
+
+The default embedder uses `sentence-transformers`, which needs PyTorch. On a machine
+without a GPU, install the CPU-only build first to avoid a multi-gigabyte download:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+## Quickstart
 
 ```python
 from bounded_distill import distill
 
+# texts and the labels your LLM pipeline gave them, e.g. from your logs
 router = distill(texts, llm_labels, target_agreement=0.97)
 
-label = router.predict(text)
-if label is None:              # not confident enough
+if (label := router.predict(text)) is None:   # not confident enough
     label = my_llm_pipeline(text)
 
-print(router.report())         # coverage, agreement (with bound), per-class stats, savings
-router.suspects(top_n=50)      # confident disagreements worth a human look
+print(router.report())
+for suspect in router.suspects(top_n=20):
+    print(suspect)
+
+router.save("router/")                         # later: Router.load("router/")
 ```
 
-Optional: pass a small gold-labeled set to see accuracy next to agreement with the LLM.
+`llm_labels` may contain `None` or empty strings (failed calls, parsing errors): they are
+excluded, counted in the report, and a warning tells you how many. Pass
+`on_invalid="drop"` to skip the warning or `on_invalid="error"` to fail instead. Pass
+`labels=[...]` to fix the label set; then labels outside it are invalid too.
+
+The default embedder is `intfloat/multilingual-e5-small` (many languages, runs on CPU).
+To use your own vectors, pass `embed=`: any function from a list of texts to an
+`(n, dim)` array.
+
+## Reading the report
+
+On synthetic data with 3% wrong LLM labels and a 90% target (made with a fake embedder,
+so the latency is unrealistically low):
+
+```
+bounded-distill report
+  texts:      900 total, 898 used, 2 invalid (1 missing (None), 1 empty)
+  target:     agreement >= 90.0% at 95% confidence: reached
+  threshold:  0.8218
+  coverage:   53.6% (481 of 898 texts answered without the LLM)
+  agreement:  92.3% on answered texts, lower bound 90.1%
+  latency:    0.02 ms per text (median, student)
+
+  per class  support  coverage  agreement
+  billing        299     55.5%      95.8%
+  other          297     52.2%      89.0%
+  tech           302     53.0%      91.9%
+
+  confident disagreements (LLM label -> student label)
+  other -> tech         9
+  other -> billing      8
+  ...
+```
+
+- **coverage** is the share of traffic the small model answers, so it is also the share
+  of LLM calls you save.
+- **lower bound** is what the threshold is chosen by: with 95% confidence, agreement on
+  the answered texts is at least this. If no threshold can guarantee the target, the
+  router answers nothing and the report says so — it does not silently lower the bar.
+- **per class** shows what the overall number hides: here `other` is below the target
+  even though the total is above it.
+- **confident disagreements** point at class definitions the LLM finds ambiguous —
+  typically a catch-all class like `other`.
+
+All numbers are out-of-fold estimates: each text is scored by a model that did not see
+it during training. `print(...)` is for people; `report.to_dict()` gives plain JSON.
+
+Suspects list single texts, most confident first. In this example 8 of the top 10 are
+labels that were deliberately broken, although they are only 18% of all disagreements:
+
+```
+#90  tech -> billing (96.8%): 'billing 90'
+#359  other -> tech (96.5%): 'tech 59'
+```
+
+The number is the position in your input, so you can find the row in your own data.
+
+## Checking against gold labels
+
+Agreement with the LLM is not accuracy. If you have a few hundred human-labeled texts
+that were not used for training, compare the LLM, the small model and the cascade:
+
+```python
+print(router.evaluate(texts, gold_labels, llm_labels))
+```
+
+The small model only answers texts it is confident about, which tend to be the easier
+ones, so its accuracy is shown next to the LLM's accuracy **on the same texts**.
+
+## How it works
+
+1. Embed the texts with a frozen sentence embedder.
+2. Get out-of-fold class probabilities with k-fold logistic regression.
+3. For each candidate threshold, count the covered texts and those where the small model
+   agrees with the LLM; compute the one-sided Wilson lower bound of agreement.
+4. Pick the lowest threshold (the most coverage) whose bound reaches the target.
+5. Refit on all data. Prediction is one embedding plus a matrix product in numpy.
+
+A saved router is a JSON file and a `.npz` file — no pickle, and no training texts on
+disk. The design is described in [HLD/offline_core.md](HLD/offline_core.md).
 
 ## How it differs from similar tools
 
@@ -66,15 +164,19 @@ bounded-distill focuses on:
 
 - Agreement with the LLM is not accuracy. If the LLM makes the same mistake
   consistently, the small model learns it too. Use a gold set to check.
+- The threshold is chosen and evaluated on the same out-of-fold data, so the bound is
+  slightly optimistic.
 - Single-label classification with a fixed, known set of labels only.
 - When the small model answers, you get only the label, not other fields of your
   pipeline's structured output.
 
 ## Roadmap
 
-- [ ] Offline core: `distill`, `Router.predict`, save/load
-- [ ] Report: coverage, agreement with lower bound, per-class metrics, savings
-- [ ] Suspects (confident disagreements)
+- [x] Offline core: `distill`, `Router.predict`, save/load
+- [x] Report: coverage, agreement with lower bound, per-class metrics, latency
+- [x] Suspects (confident disagreements)
+- [x] Evaluation against gold labels
+- [ ] Release 0.1.0 on PyPI
 - [ ] Benchmarks on public datasets with real LLM labels
 - [ ] Optional online mode (collect pairs from a running pipeline)
 

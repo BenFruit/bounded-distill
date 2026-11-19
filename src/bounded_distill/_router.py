@@ -12,9 +12,19 @@ import numpy as np
 import numpy.typing as npt
 
 from bounded_distill._embed import DEFAULT_MODEL, default_embed, embed_texts
+from bounded_distill._report import (
+    GoldReport,
+    Report,
+    Suspect,
+    build_gold_report,
+    build_report,
+    build_suspects,
+    median_latency_ms,
+)
 from bounded_distill._types import EmbedFn, TrainingData
 
 FORMAT_VERSION = 1
+_LATENCY_SAMPLE = 20  # texts timed one by one for Report.student_latency_ms
 _META_FILE = "router.json"
 _WEIGHTS_FILE = "weights.npz"
 
@@ -38,6 +48,55 @@ class Router:
     # only: save() never writes the user's texts to disk, so a loaded router has None here.
     training: TrainingData | None = None
     oof_proba: npt.NDArray[np.float64] | None = None  # (n_used, n_labels)
+
+    def report(self) -> Report:
+        """Coverage, agreement with its lower bound, per-class stats and latency.
+
+        Needs the training data, so it works on a router returned by ``distill()``, not on
+        one from ``load()``.
+        """
+        training, oof_proba = self._training_data("report()")
+        return build_report(
+            training,
+            oof_proba,
+            threshold=self.threshold,
+            target_agreement=self.target_agreement,
+            confidence_level=self.confidence_level,
+            student_latency_ms=median_latency_ms(self.predict, training.texts[:_LATENCY_SAMPLE]),
+        )
+
+    def suspects(self, top_n: int = 50) -> list[Suspect]:
+        """Training texts the student confidently labels differently from the LLM.
+
+        A review queue, most confident disagreements first: these are often LLM labeling
+        mistakes. Scored out-of-fold, so the student never saw the text it judges. Works on a
+        router returned by ``distill()``, not on one from ``load()``.
+        """
+        training, oof_proba = self._training_data("suspects()")
+        return build_suspects(training, oof_proba, top_n=top_n)
+
+    def evaluate(
+        self, texts: Sequence[str], gold_labels: Sequence[str], llm_labels: Sequence[str]
+    ) -> GoldReport:
+        """Accuracy of the LLM, the student and the cascade against human (gold) labels.
+
+        Use texts the router was not trained on, with the labels your LLM gave them. Needs
+        no training data, so it also works on a router from ``load()``.
+        """
+        if not len(texts) == len(gold_labels) == len(llm_labels):
+            raise ValueError(
+                "texts, gold_labels and llm_labels differ in length: "
+                f"{len(texts)}, {len(gold_labels)}, {len(llm_labels)}"
+            )
+        return build_gold_report(self.predict_batch(texts), gold_labels, llm_labels)
+
+    def _training_data(self, method: str) -> tuple[TrainingData, npt.NDArray[np.float64]]:
+        if self.training is None or self.oof_proba is None:
+            raise ValueError(
+                f"{method} needs the training data, which is kept in memory only: call it on "
+                "the router returned by distill(), not on one from Router.load()"
+            )
+        return self.training, self.oof_proba
 
     def save(self, path: str | Path) -> None:
         """Write the router to directory ``path``: ``router.json`` plus ``weights.npz``.

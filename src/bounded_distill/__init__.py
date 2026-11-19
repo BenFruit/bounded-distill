@@ -8,9 +8,20 @@ Typical use::
 """
 
 from bounded_distill._distill import distill
+from bounded_distill._report import ClassStats, GoldReport, Report, Suspect
 from bounded_distill._router import Router
 from bounded_distill._types import EmbedFn, InvalidPolicy
 
 __version__ = "0.0.1"
 
-__all__ = ["EmbedFn", "InvalidPolicy", "Router", "__version__", "distill"]
+__all__ = [
+    "ClassStats",
+    "EmbedFn",
+    "GoldReport",
+    "InvalidPolicy",
+    "Report",
+    "Router",
+    "Suspect",
+    "__version__",
+    "distill",
+]
