@@ -1,6 +1,6 @@
 # bounded-distill: design of the offline core
 
-This document describes the 0.1 versions and explains why it is built the way it is. It only
+This document describes version 0.2 and explains why it is built the way it is. It only
 covers the offline mode, where the LLM labels already exist. An online mode is out of scope.
 
 ## 1. Goal
@@ -32,6 +32,7 @@ def distill(
     *,
     target_agreement: float = 0.97,
     confidence_level: float = 0.95,
+    threshold_method: Literal["sgr", "wilson"] = "sgr",   # how the threshold is picked
     labels: Sequence[str] | None = None,   # fixed label set; inferred from the data if None
     embed: EmbedFn | None = None,          # default: multilingual sentence embedder
     n_folds: int = 5,
@@ -42,6 +43,7 @@ def distill(
 class Router:
     labels: tuple[str, ...]
     threshold: float                       # math.inf if the target can't be reached
+    threshold_method: Literal["sgr", "wilson"]
 
     def predict(self, text: str) -> str | None: ...
     def predict_batch(self, texts: Sequence[str]) -> list[str | None]: ...
@@ -75,8 +77,9 @@ Intended use: `if (label := router.predict(text)) is None: label = my_pipeline(t
 - `labels`, if given, must be unique and non-empty.
 - After filtering there must be at least 2 classes, and every class needs at least `n_folds`
   examples. Otherwise `ValueError`, naming every class that is too small.
-- `0 < target_agreement < 1`, `0 < confidence_level < 1`, `n_folds >= 2`. Settings are checked
-  before embedding, so a typo fails right away.
+- `0 < target_agreement < 1`, `0 < confidence_level < 1`, `n_folds >= 2`, and
+  `threshold_method` is `"sgr"` or `"wilson"`. Settings are checked before embedding, so a
+  typo fails right away.
 
 ## 4. Algorithm
 
@@ -88,13 +91,22 @@ Intended use: `if (label := router.predict(text)) is None: label = my_pipeline(t
 4. Confidence is the highest predicted probability, and the student label is its class. No
    probability calibration (Platt, isotonic) is needed: the threshold is chosen empirically,
    so only the ranking of confidences matters.
-5. Threshold selection, in the pure function `select_threshold`:
-   - the candidates are the unique out-of-fold confidences;
-   - for a candidate `t`, the covered texts are those with confidence ≥ t, `n` is their count
-     and `k` is how many of them have student label == LLM label;
-   - `lb = wilson_lower_bound(k, n, confidence_level)`, one-sided;
-   - pick the lowest `t` (the most coverage) with `lb ≥ target_agreement`;
-   - if no candidate qualifies, `threshold = math.inf`: the router always returns `None`, the
+5. Threshold selection. The candidates are the unique out-of-fold confidences. For a
+   candidate `t`, the covered texts are those with confidence at least `t`, `n` is their
+   count and `k` is how many of them have student label == LLM label. Two pure functions
+   pick `t`, chosen by `threshold_method`:
+   - `select_threshold_sgr` (default), Selection with Guaranteed Risk (Geifman and El-Yaniv,
+     2017). A binary search over the candidates plus "cover nothing" looks for the lowest
+     `t` whose exact one-sided Clopper-Pearson lower bound of `k / n` reaches the target. It
+     tests at most `m = ceil(log2(candidates + 1))` thresholds, and each test runs at level
+     `1 - (1 - confidence_level) / m`. By the union bound the returned threshold meets the
+     target with probability at least `confidence_level`. The search assumes agreement mostly
+     grows with the threshold; when it doesn't, it can miss a narrow window of good
+     thresholds and return a higher one, which errs on the safe side.
+   - `select_threshold` (`"wilson"`): the lowest `t` whose one-sided Wilson lower bound at
+     `confidence_level` reaches the target, checked at every candidate. It gives more
+     coverage, but the many checks are not corrected for, so the guarantee is approximate.
+   - If no candidate qualifies, `threshold = math.inf`: the router always returns `None`, the
      report says the target can't be reached, and a `UserWarning` is emitted. No exception.
 6. Prediction uses the `n_folds` models from step 3: the probabilities for a new text are their
    average, and the threshold applies to the highest averaged probability. There is no refit
@@ -115,13 +127,22 @@ With `z = NormalDist().inv_cdf(confidence_level)` (standard library, no scipy) a
 
 For `n = 0`, `lb = 0`.
 
+### Clopper-Pearson one-sided lower bound
+
+The exact bound: `lb = Beta.ppf(1 − confidence_level, k, n − k + 1)`, the quantile of a beta
+distribution, and `lb = 0` for `k = 0`. It never undercovers, so it is a little more
+conservative than Wilson. It comes from scipy, which scikit-learn already depends on, and
+is imported only when SGR runs.
+
 ### Known limitations
 
-- The threshold is chosen and evaluated on the same out-of-fold data, and choosing the best of
-  many candidates makes the bound a little optimistic. In the benchmark (4 LLMs, 2 datasets,
-  2 embedders, 75 reachable targets) the test agreement was significantly below the target
-  only once, fewer than the 5% that 95% confidence allows. A separate calibration split may
-  come later if it turns out to matter.
+- With `"wilson"`, choosing the best of many candidates makes the bound a little optimistic.
+  SGR corrects for it. In the benchmark (4 LLMs, 2 datasets, 2 embedders, 80 cases per
+  method) the test agreement was significantly below the target once with Wilson and never
+  with SGR, while Wilson answered 2.5 points more traffic on average.
+- The out-of-fold predictions come from k models that each saw most of the data, and the
+  router averages them. The threshold is chosen on the first and applied to the second.
+  The benchmark shows this works, but it is not part of the formal guarantee.
 - The average of the fold models is a bit smoother than any single fold model, so its
   confidences are close to the out-of-fold ones but not identical. Step 6 has the measured
   effect.
@@ -135,7 +156,9 @@ For `n = 0`, `lb = 0`.
   `target_reached`;
 - `n_covered` and `coverage`, the share of texts the student answers (out-of-fold). Coverage
   is also the share of LLM calls saved, so there is no separate field for that;
-- `agreement_covered`, the point estimate, and `agreement_covered_lower`, the Wilson bound;
+- `threshold_method`, and `agreement_covered`, the point estimate, and
+  `agreement_covered_lower`, the bound the method checks: Wilson at `confidence_level`, or
+  for SGR the Clopper-Pearson bound at the corrected level of its tests;
 - `per_class`: for each LLM label, its support, coverage and agreement on the covered texts;
 - `disagreements`: counts of (LLM label, student label) pairs among confident disagreements,
   which point at classes the prompt doesn't separate well;
@@ -175,7 +198,9 @@ comparing it with the LLM on all texts would be unfair.
 `save(path)` writes a directory, without pickle:
 
 - `router.json` with the format version, the library version, the labels, the threshold, the
-  settings, and the embedder's model name (or `"custom"`). No report, since that depends on
+  settings (including `threshold_method`), and the embedder's model name (or `"custom"`). A
+  file without `threshold_method`, written by 0.1, is read as `"wilson"`, the only method
+  0.1 had. No report, since that depends on
   the training data.
 - A threshold of `math.inf` is stored as JSON `null`, because strict JSON has no Infinity.
   Training texts and out-of-fold data are never written to disk, since they may contain
@@ -211,7 +236,8 @@ Small pure functions, no class hierarchies, no extension points.
 
 ## 9. Dependencies and tooling
 
-- Runtime: `numpy`, `scikit-learn`, `sentence-transformers`. The README explains how to
+- Runtime: `numpy`, `scikit-learn`, `scipy` (for the Clopper-Pearson bound; scikit-learn
+  needs it anyway), `sentence-transformers`. The README explains how to
   install the CPU build of PyTorch.
 - Development: `ruff` for linting and formatting, `pyright` in strict mode, `pytest`. CI runs
   on the oldest and the newest supported Python. The benchmark scripts in `benchmarks/` (not
@@ -222,8 +248,10 @@ Small pure functions, no class hierarchies, no extension points.
 ## 10. Testing
 
 - `wilson_lower_bound`: known values and edge cases (`n = 0`, `k = n`).
-- `select_threshold`: synthetic confidences and agreements, and an unreachable target giving
-  `inf`.
+- `clopper_pearson_lower_bound`: reference values from `scipy.stats.binomtest`, the closed
+  form for `k = n`, and that it is below Wilson.
+- `select_threshold` and `select_threshold_sgr`: synthetic confidences and agreements, ties
+  never split, an unreachable target giving `inf`, and SGR's threshold never below Wilson's.
 - `distill` end to end with a fake, deterministic `embed`, so no model is downloaded:
   well-separated synthetic data gives high coverage, noisy labels give lower coverage, and
   bad inputs raise the expected errors.
@@ -243,5 +271,7 @@ Small pure functions, no class hierarchies, no extension points.
 - `n_folds` and `random_state` are keyword arguments. `n_folds` is also the number of models
   the router averages, and `random_state` makes runs reproducible.
 
-Still open for later versions: per-class thresholds, a separate calibration split to remove
-the selection optimism (section 4), an online mode.
+- `threshold_method="sgr"` is the default since 0.2. A strict guarantee by default is worth
+  a few points of coverage; users who want the coverage choose `"wilson"` knowingly.
+
+Still open for later versions: per-class thresholds, an online mode.

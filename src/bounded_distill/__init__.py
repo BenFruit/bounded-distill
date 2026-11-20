@@ -10,7 +10,7 @@ Typical use::
 from bounded_distill._distill import distill
 from bounded_distill._report import ClassStats, GoldReport, Report, Suspect
 from bounded_distill._router import Router
-from bounded_distill._types import EmbedFn, InvalidPolicy
+from bounded_distill._types import EmbedFn, InvalidPolicy, ThresholdMethod
 
 __version__ = "0.1.1"
 
@@ -22,6 +22,7 @@ __all__ = [
     "Report",
     "Router",
     "Suspect",
+    "ThresholdMethod",
     "__version__",
     "distill",
 ]

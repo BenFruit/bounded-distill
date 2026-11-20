@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import numpy as np
 import numpy.typing as npt
@@ -21,7 +21,7 @@ from bounded_distill._report import (
     build_suspects,
     median_latency_ms,
 )
-from bounded_distill._types import EmbedFn, TrainingData
+from bounded_distill._types import EmbedFn, ThresholdMethod, TrainingData
 
 FORMAT_VERSION = 2  # 2: one weight set per fold model (1 had a single refit model)
 _LATENCY_SAMPLE = 20  # texts timed one by one for Report.student_latency_ms
@@ -47,6 +47,7 @@ class Router:
     embedder: str  # default model name, or "custom"
     target_agreement: float
     confidence_level: float
+    threshold_method: ThresholdMethod
     # Training texts and out-of-fold probabilities for report() and suspects(). In memory
     # only: save() never writes the user's texts to disk, so a loaded router has None here.
     training: TrainingData | None = None
@@ -65,6 +66,7 @@ class Router:
             threshold=self.threshold,
             target_agreement=self.target_agreement,
             confidence_level=self.confidence_level,
+            threshold_method=self.threshold_method,
             student_latency_ms=median_latency_ms(self.predict, training.texts[:_LATENCY_SAMPLE]),
         )
 
@@ -117,6 +119,7 @@ class Router:
             "threshold": None if math.isinf(self.threshold) else self.threshold,
             "target_agreement": self.target_agreement,
             "confidence_level": self.confidence_level,
+            "threshold_method": self.threshold_method,
             "embedder": self.embedder,
         }
         (directory / _META_FILE).write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -163,6 +166,11 @@ class Router:
                 f"{len(labels)} labels"
             )
 
+        # Routers saved before 0.2 have no method field; they all used the Wilson bound.
+        method = meta.get("threshold_method", "wilson")
+        if method not in get_args(ThresholdMethod):
+            raise ValueError(f"unknown threshold_method {method!r} in {_META_FILE}")
+
         threshold = meta["threshold"]
         return cls(
             labels=labels,
@@ -173,6 +181,7 @@ class Router:
             embedder=embedder,
             target_agreement=float(meta["target_agreement"]),
             confidence_level=float(meta["confidence_level"]),
+            threshold_method=method,
         )
 
     def predict(self, text: str) -> str | None:

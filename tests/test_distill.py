@@ -46,8 +46,8 @@ def test_clean_labels_give_a_threshold_that_meets_the_target() -> None:
 
 
 def test_noisy_labels_give_lower_coverage() -> None:
-    clean = distill(*make_dataset(500, flip_rate=0.0), embed=fake_embed, target_agreement=0.95)
-    noisy = distill(*make_dataset(500, flip_rate=0.02), embed=fake_embed, target_agreement=0.95)
+    clean = distill(*make_dataset(1000, flip_rate=0.0), embed=fake_embed, target_agreement=0.95)
+    noisy = distill(*make_dataset(1000, flip_rate=0.02), embed=fake_embed, target_agreement=0.95)
     assert 0 < coverage(noisy) < coverage(clean)
 
 
@@ -126,3 +126,25 @@ def test_rejects_bad_embed_output(output: npt.NDArray[np.float64], message: str)
 def test_l2_normalize_gives_unit_rows_and_keeps_zero_rows() -> None:
     x = np.array([[3.0, 4.0], [0.0, 0.0], [0.0, -2.0]], dtype=np.float32)
     np.testing.assert_allclose(l2_normalize(x), [[0.6, 0.8], [0.0, 0.0], [0.0, -1.0]])
+
+
+def test_default_threshold_method_is_sgr() -> None:
+    router = distill(*make_dataset(300, flip_rate=0.0), embed=fake_embed, target_agreement=0.9)
+    assert router.threshold_method == "sgr"
+
+
+def test_wilson_answers_at_least_as_much_as_sgr() -> None:
+    texts, labels = make_dataset(1000, flip_rate=0.02)
+    sgr = distill(texts, labels, embed=fake_embed, target_agreement=0.95)
+    wilson = distill(
+        texts, labels, embed=fake_embed, target_agreement=0.95, threshold_method="wilson"
+    )
+    assert wilson.threshold_method == "wilson"
+    assert wilson.threshold <= sgr.threshold < math.inf
+    assert coverage(wilson) >= coverage(sgr) > 0
+
+
+def test_unreachable_target_warning_suggests_wilson() -> None:
+    texts, labels = make_dataset(200, flip_rate=0.05)
+    with pytest.warns(UserWarning, match='threshold_method="wilson"'):
+        distill(texts, labels, embed=fake_embed, target_agreement=0.99)

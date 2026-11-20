@@ -10,6 +10,7 @@ from synthetic import fake_embed, make_dataset
 from bounded_distill._distill import distill
 from bounded_distill._embed import DEFAULT_MODEL, default_embed
 from bounded_distill._router import Router
+from bounded_distill._types import ThresholdMethod
 
 NEW_TEXTS = [f"{c} new {i}" for c in ("billing", "tech", "other") for i in range(30)]
 
@@ -104,3 +105,28 @@ def _edit_meta(directory: Path, **changes: object) -> None:
     meta = json.loads(path.read_text(encoding="utf-8"))
     meta.update(changes)
     path.write_text(json.dumps(meta), encoding="utf-8")
+
+
+@pytest.mark.parametrize("method", ["sgr", "wilson"])
+def test_threshold_method_round_trips(tmp_path: Path, method: ThresholdMethod) -> None:
+    texts, labels = make_dataset(200, flip_rate=0.0)
+    router = distill(texts, labels, embed=fake_embed, target_agreement=0.9, threshold_method=method)
+    router.save(tmp_path)
+    assert Router.load(tmp_path, embed=fake_embed).threshold_method == method
+
+
+def test_router_saved_without_method_loads_as_wilson(router: Router, tmp_path: Path) -> None:
+    # Routers saved by 0.1 have no threshold_method field; they all used the Wilson bound.
+    router.save(tmp_path)
+    path = tmp_path / "router.json"
+    meta = json.loads(path.read_text(encoding="utf-8"))
+    del meta["threshold_method"]
+    path.write_text(json.dumps(meta), encoding="utf-8")
+    assert Router.load(tmp_path, embed=fake_embed).threshold_method == "wilson"
+
+
+def test_rejects_unknown_threshold_method(router: Router, tmp_path: Path) -> None:
+    router.save(tmp_path)
+    _edit_meta(tmp_path, threshold_method="magic")
+    with pytest.raises(ValueError, match="unknown threshold_method 'magic'"):
+        Router.load(tmp_path, embed=fake_embed)

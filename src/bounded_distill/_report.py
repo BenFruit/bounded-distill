@@ -12,8 +12,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from bounded_distill._threshold import wilson_lower_bound
-from bounded_distill._types import InvalidReason, TrainingData
+from bounded_distill._threshold import agreement_lower_bound
+from bounded_distill._types import InvalidReason, ThresholdMethod, TrainingData
 
 _REASON_TEXT: dict[InvalidReason, str] = {
     "missing": "missing (None)",
@@ -49,11 +49,12 @@ class Report:
     threshold: float  # math.inf if the target is unreachable
     target_agreement: float
     confidence_level: float
+    threshold_method: ThresholdMethod
     target_reached: bool
     n_covered: int  # texts the student answers
     coverage: float  # n_covered / n_used: also the share of LLM calls saved
     agreement_covered: float | None  # point estimate on covered texts; None if none covered
-    agreement_covered_lower: float  # one-sided Wilson lower bound at confidence_level
+    agreement_covered_lower: float  # the lower bound that threshold_method checks
     per_class: tuple[ClassStats, ...]
     disagreements: tuple[tuple[str, str, int], ...]  # (LLM label, student label, count)
     student_latency_ms: float  # median per-text latency of a single predict() call
@@ -79,7 +80,8 @@ class Report:
     def __str__(self) -> str:
         invalid = f" ({format_invalid_counts(self.invalid)})" if self.invalid else ""
         target = (
-            f"agreement >= {self.target_agreement:.1%} at {self.confidence_level:.0%} confidence"
+            f"agreement >= {self.target_agreement:.1%} at {self.confidence_level:.0%} "
+            f"confidence ({self.threshold_method})"
         )
         lines = [
             "bounded-distill report",
@@ -213,12 +215,14 @@ def build_report(
     threshold: float,
     target_agreement: float,
     confidence_level: float,
+    threshold_method: ThresholdMethod,
     student_latency_ms: float,
 ) -> Report:
     """Assemble a Report from out-of-fold probabilities; pure apart from its inputs."""
     labels = training.label_set
     student = [labels[int(i)] for i in oof_proba.argmax(axis=1)]
-    covered = [bool(c >= threshold) for c in oof_proba.max(axis=1)]
+    confidences = oof_proba.max(axis=1)
+    covered = [bool(c >= threshold) for c in confidences]
     llm = training.labels
 
     n_used = len(llm)
@@ -242,11 +246,14 @@ def build_report(
         threshold=threshold,
         target_agreement=target_agreement,
         confidence_level=confidence_level,
+        threshold_method=threshold_method,
         target_reached=n_covered > 0,
         n_covered=n_covered,
         coverage=coverage,
         agreement_covered=n_agree / n_covered if n_covered else None,
-        agreement_covered_lower=wilson_lower_bound(n_agree, n_covered, confidence_level),
+        agreement_covered_lower=agreement_lower_bound(
+            threshold_method, n_agree, n_covered, len(set(confidences.tolist())), confidence_level
+        ),
         per_class=tuple(_class_stats(label, covered, student, llm) for label in labels),
         disagreements=disagreements,
         student_latency_ms=student_latency_ms,

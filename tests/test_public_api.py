@@ -27,6 +27,7 @@ def test_public_names() -> None:
         "Report",
         "Router",
         "Suspect",
+        "ThresholdMethod",
         "__version__",
         "distill",
     ]

@@ -159,28 +159,51 @@ def test_given_label_without_examples_is_too_small() -> None:
 
 # --- check_settings -------------------------------------------------------------------------
 
+_METHOD = {"threshold_method": "sgr"}
+
 
 def test_check_settings_accepts_defaults() -> None:
-    check_settings(target_agreement=0.97, confidence_level=0.95, n_folds=5, on_invalid="warn")
+    check_settings(
+        target_agreement=0.97, confidence_level=0.95, n_folds=5, on_invalid="warn", **_METHOD
+    )
 
 
 @pytest.mark.parametrize("value", [0.0, 1.0, -0.5, 97.0])
 def test_check_settings_rejects_target_outside_unit_interval(value: float) -> None:
     with pytest.raises(ValueError, match="target_agreement"):
-        check_settings(target_agreement=value, confidence_level=0.95, n_folds=5, on_invalid="warn")
+        check_settings(
+            target_agreement=value, confidence_level=0.95, n_folds=5, on_invalid="warn", **_METHOD
+        )
 
 
 @pytest.mark.parametrize("value", [0.0, 1.0])
 def test_check_settings_rejects_confidence_level_outside_unit_interval(value: float) -> None:
     with pytest.raises(ValueError, match="confidence_level"):
-        check_settings(target_agreement=0.97, confidence_level=value, n_folds=5, on_invalid="warn")
+        check_settings(
+            target_agreement=0.97, confidence_level=value, n_folds=5, on_invalid="warn", **_METHOD
+        )
 
 
 def test_check_settings_rejects_fewer_than_two_folds() -> None:
     with pytest.raises(ValueError, match="n_folds"):
-        check_settings(target_agreement=0.97, confidence_level=0.95, n_folds=1, on_invalid="warn")
+        check_settings(
+            target_agreement=0.97, confidence_level=0.95, n_folds=1, on_invalid="warn", **_METHOD
+        )
 
 
 def test_check_settings_rejects_unknown_invalid_policy() -> None:
     with pytest.raises(ValueError, match=r"on_invalid must be one of \['drop', 'warn', 'error'\]"):
-        check_settings(target_agreement=0.97, confidence_level=0.95, n_folds=5, on_invalid="wran")
+        check_settings(
+            target_agreement=0.97, confidence_level=0.95, n_folds=5, on_invalid="wran", **_METHOD
+        )
+
+
+def test_check_settings_rejects_unknown_threshold_method() -> None:
+    with pytest.raises(ValueError, match=r"threshold_method must be one of \['sgr', 'wilson'\]"):
+        check_settings(
+            target_agreement=0.97,
+            confidence_level=0.95,
+            n_folds=5,
+            on_invalid="warn",
+            threshold_method="wilsn",
+        )

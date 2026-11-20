@@ -46,7 +46,7 @@ def test_suspect_index_counts_invalid_labels() -> None:
     texts, labels = make_dataset(100, flip_rate=0.03)
     noisy: list[str | None] = [None, *labels]
     router = distill(
-        ["junk", *texts], noisy, embed=fake_embed, target_agreement=0.9, on_invalid="drop"
+        ["junk", *texts], noisy, embed=fake_embed, target_agreement=0.8, on_invalid="drop"
     )
     suspects = router.suspects()
     assert suspects

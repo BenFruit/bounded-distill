@@ -35,8 +35,8 @@ You pass in texts with the labels your LLM gave them (from your logs, for exampl
 target like "agree with the LLM at least 97% of the time". The library then:
 
 1. trains a small classifier: frozen sentence embeddings plus logistic regression;
-2. picks a confidence threshold so that the lower confidence bound of agreement on the texts
-   it answers meets your target, not just the average;
+2. picks a confidence threshold so that, with 95% confidence, agreement on the texts it
+   answers meets your target, not just on average;
 3. reports how much traffic the small model takes over, its agreement per class, and its
    latency;
 4. lists suspects: texts where the small model is confident but disagrees with the LLM.
@@ -85,6 +85,11 @@ The default embedder is `intfloat/multilingual-e5-small`: it handles many langua
 fine on a CPU. To use your own embeddings, pass `embed=`, a function that takes a list of
 texts and returns an `(n, dim)` array.
 
+There are two ways to pick the threshold. The default, `threshold_method="sgr"`, gives a
+strict guarantee. `threshold_method="wilson"` lets the small model answer a few percent more
+traffic, but its guarantee is only approximate. "How it works" below explains the
+difference, and the benchmark compares them.
+
 ## Reading the report
 
 Here is a report on synthetic data with 3% wrong LLM labels and a 90% target. The data was
@@ -93,20 +98,20 @@ embedded with a fake embedder, which is why the latency is so low.
 ```
 bounded-distill report
   texts:      900 total, 898 used, 2 invalid (1 missing (None), 1 empty)
-  target:     agreement >= 90.0% at 95% confidence: reached
-  threshold:  0.8218
-  coverage:   53.6% (481 of 898 texts answered without the LLM)
-  agreement:  92.3% on answered texts, lower bound 90.1%
-  latency:    0.02 ms per text (median, student)
+  target:     agreement >= 90.0% at 95% confidence (sgr): reached
+  threshold:  0.8540
+  coverage:   45.5% (409 of 898 texts answered without the LLM)
+  agreement:  93.9% on answered texts, lower bound 90.2%
+  latency:    0.04 ms per text (median, student)
 
   per class  support  coverage  agreement
-  billing        299     55.5%      95.8%
-  other          297     52.2%      89.0%
-  tech           302     53.0%      91.9%
+  billing        298     49.7%      95.9%
+  other          297     42.1%      90.4%
+  tech           303     44.9%      94.9%
 
   confident disagreements (LLM label -> student label)
-  other -> tech         9
-  other -> billing      8
+  other -> tech         7
+  other -> billing      5
   ...
 ```
 
@@ -115,20 +120,21 @@ you save. The lower bound is what the threshold is based on: with 95% confidence
 on the answered texts is at least this high. If no threshold can reach the target, the
 router doesn't answer anything and the report tells you so.
 
-The per-class table shows what the total hides. Here the class `other` is below 90% even
-though the overall number is above it. The disagreement list points at classes the LLM finds
-hard to tell apart, and a catch-all class like `other` is the usual suspect.
+The per-class table shows what the total hides. Overall agreement is 93.9%, but the class
+`other` is only just above the 90% target. The bound is about all answered texts together,
+not about each class. The disagreement list points at classes the LLM finds hard to tell
+apart, and a catch-all class like `other` is the usual suspect.
 
 All these numbers are out-of-fold: each text is scored by a model that didn't see it in
 training. `print(report)` is meant for reading, `report.to_dict()` gives you plain JSON.
 
-Suspects are single texts, most confident first. In this example 8 of the top 10 are labels
-that were broken on purpose, even though broken labels make up only 18% of all
+Suspects are single texts, most confident first. In this example 9 of the top 10 are labels
+that were broken on purpose, even though broken labels make up only 16% of all
 disagreements:
 
 ```
-#90  tech -> billing (96.8%): 'billing 90'
-#359  other -> tech (96.5%): 'tech 59'
+#359  other -> tech (96.3%): 'tech 59'
+#90  tech -> billing (96.3%): 'billing 90'
 ```
 
 The number in front is the text's position in your input, so you can find it in your data.
@@ -163,7 +169,8 @@ against the human labels is 67% to 83% on Banking77 and 66% to 84% on MASSIVE.
 The router was trained only on the LLM's labels for the train texts. The human labels were
 used only at the end, to check the router on test texts it had never seen.
 
-The charts and the first table use Gemma 4 31B.
+The charts and the first two tables use Gemma 4 31B and `threshold_method="wilson"`, the only
+method in 0.1. The section after them compares the two methods.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_dark.png">
@@ -200,9 +207,9 @@ Giga-Embeddings on a GPU server, network included. One Gemma call took 117 ms.
 
 What I took away from it:
 
-- The bound holds on new data. Over 16 runs (4 LLMs, 2 datasets, 2 embedders) there are 75
-  reachable targets. The test agreement was below the target in 18 of them, by up to 1.1
-  points, but only once was it significantly below, which is fewer than the 5% that 95%
+- The Wilson bound holds on new data. Over 16 runs (4 LLMs, 2 datasets, 2 embedders) there
+  are 75 reachable targets. The test agreement was below the target in 18 of them, by up to
+  1.1 points, but only once was it significantly below, which is fewer than the 5% that 95%
   confidence allows. The coverage measured on test was within 3.3 points of what the report
   predicted.
 - The combination was a little more accurate than the LLM alone for every LLM and dataset,
@@ -223,6 +230,31 @@ What I took away from it:
   some of them, most are ambiguous between two intents, and quite a few human labels are simply
   wrong. So accuracy against human labels understates how good all of these models are.
 
+### Picking the threshold
+
+The same 16 runs, with the threshold picked in five ways from the same out-of-fold
+predictions. Each method was tried at the 5 targets, so 80 cases per method. "Missed" means
+the agreement on test was below the target, "broken" means significantly below.
+
+| Method | Traffic without the LLM (mean) | Missed | Broken |
+|---|---|---|---|
+| Fixed confidence 0.5 | 45.0% | 26 of 80 | 19 of 80 |
+| Fixed confidence 0.9 | 6.0% | 0 of 80 | 0 of 80 |
+| Out-of-fold agreement, no bound | 54.7% | 38 of 80 | 5 of 80 |
+| `threshold_method="wilson"` | 51.9% | 18 of 80 | 1 of 80 |
+| `threshold_method="sgr"` (default) | 49.4% | 9 of 80 | 0 of 80 |
+
+- A fixed threshold does not carry over between setups. At 0.5 the small model answered
+  between 9% and 78% of the traffic depending on the LLM and the embedder, and broke the
+  target in 13 of 16 runs at 0.99. At 0.9 it was safe but answered almost nothing.
+- Without a bound, the agreement on new texts fell below the target about half the time.
+- Wilson checks every candidate threshold without correcting for that, so its guarantee is
+  approximate. It answered 2.5 points more traffic than SGR on average, most at the strict
+  0.99 target (22.5% against 17.8%), and broke the target once.
+- SGR (Selection with Guaranteed Risk, Geifman and El-Yaniv, 2017) corrects for the
+  thresholds it tests and never broke the target. In 4 of the 80 cases it found no threshold
+  at all where Wilson did, mostly at 0.99. That is the price of the strict guarantee.
+
 Some caveats. Both datasets are part of the MTEB benchmark, so embedding models may have been
 trained on them; Giga-Embeddings doesn't publish its training data, so its numbers could be a
 bit optimistic. Latency depends on hardware, and the LLM server used here is fast, so the main
@@ -237,9 +269,17 @@ Scripts to reproduce all of this are in
 1. Embed the texts with a frozen sentence embedding model.
 2. Train k logistic regressions with k-fold cross-validation, so every training text gets
    class probabilities from a model that didn't see it.
-3. For each possible threshold, count the texts above it and how many of them agree with the
-   LLM, and compute the one-sided Wilson lower bound for that agreement.
-4. Take the lowest threshold whose bound reaches the target. Lowest means the most coverage.
+3. Pick the threshold from these out-of-fold predictions. For a candidate threshold, count
+   the texts above it and how many of them agree with the LLM, and compute a one-sided lower
+   bound for that agreement. The lower the threshold, the more texts the small model answers.
+   - `sgr` (default): a binary search over the candidates, as in Selection with Guaranteed
+     Risk (Geifman and El-Yaniv, 2017). Each step uses the exact Clopper-Pearson bound, and
+     the 5% error budget is split between the steps, so the guarantee holds for the
+     threshold it returns.
+   - `wilson`: the lowest candidate whose Wilson bound reaches the target, checked at every
+     candidate. Testing many thresholds without a correction makes the bound a little
+     optimistic.
+4. If no threshold reaches the target, the router answers nothing and warns you.
 5. To predict, average the probabilities of the k models. These are the same models the
    threshold was picked for, so it means the same thing on new texts. A prediction is one
    embedding and a few small matrix multiplications in numpy.
@@ -263,8 +303,10 @@ fallback. This one is different in a few ways:
 
 - Agreement with the LLM is not accuracy. If the LLM keeps making the same mistake, the
   small model learns it too. Check with human labels.
-- The threshold is chosen and evaluated on the same out-of-fold data, so the bound is a bit
-  optimistic. In the benchmark only 1 of 75 targets was significantly missed on new texts.
+- The guarantee is about all answered texts together. A single class can still be below the
+  target, so look at the per-class table.
+- With `threshold_method="wilson"` the bound is a bit optimistic, because many thresholds are
+  tried without a correction. In the benchmark it broke the target in 1 of 80 cases.
 - Only single-label classification with a fixed set of labels.
 - When the small model answers, you get just the label, not the other fields your pipeline's
   structured output may have.
@@ -278,6 +320,8 @@ fallback. This one is different in a few ways:
 - [x] Benchmark on Banking77 and Russian MASSIVE with real LLM labels
 - [x] Release 0.1.0 on PyPI
 - [x] Four LLMs in the benchmark, and a check of the bound on new data
+- [x] A threshold with a strict guarantee (SGR) as the default, compared with other methods
+- [ ] Release 0.2
 - [ ] Optional online mode that collects examples from a running pipeline
 
 ## Contributing

@@ -12,8 +12,14 @@ from bounded_distill._embed import DEFAULT_MODEL, default_embed, embed_texts
 from bounded_distill._report import format_invalid_counts
 from bounded_distill._router import Router
 from bounded_distill._sklearn import cross_fit
-from bounded_distill._threshold import select_threshold
-from bounded_distill._types import EmbedFn, InvalidPolicy, InvalidReason, TrainingData
+from bounded_distill._threshold import choose_threshold
+from bounded_distill._types import (
+    EmbedFn,
+    InvalidPolicy,
+    InvalidReason,
+    ThresholdMethod,
+    TrainingData,
+)
 
 
 def distill(
@@ -22,6 +28,7 @@ def distill(
     *,
     target_agreement: float = 0.97,
     confidence_level: float = 0.95,
+    threshold_method: ThresholdMethod = "sgr",
     labels: Sequence[str] | None = None,
     embed: EmbedFn | None = None,
     n_folds: int = 5,
@@ -30,13 +37,21 @@ def distill(
 ) -> Router:
     """Train a small classifier on LLM labels and pick its confidence threshold.
 
-    The threshold is the lowest one at which, on out-of-fold predictions, the one-sided
-    Wilson lower bound (at ``confidence_level``) of agreement with the LLM is at least
-    ``target_agreement``. If no threshold reaches the target, the router never answers
-    (``threshold == math.inf``) and a ``UserWarning`` is emitted. The router predicts with
-    the average of the ``n_folds`` fold models, the same models the threshold was chosen on.
+    The threshold is chosen on out-of-fold predictions so that agreement with the LLM on
+    the answered texts is at least ``target_agreement`` with probability ``confidence_level``:
+
+    - ``threshold_method="sgr"`` (default): Selection with Guaranteed Risk (Geifman and
+      El-Yaniv, 2017), a binary search with exact Clopper-Pearson bounds corrected for the
+      number of thresholds it tests. The guarantee is strict.
+    - ``threshold_method="wilson"``: the lowest threshold whose Wilson lower bound reaches the
+      target, checked at every candidate. More coverage, but the many checks are not
+      corrected for, so the guarantee is approximate.
+
+    If no threshold reaches the target, the router never answers (``threshold == math.inf``)
+    and a ``UserWarning`` is emitted. The router predicts with the average of the
+    ``n_folds`` fold models, the same models the threshold was chosen on.
     """
-    check_settings(target_agreement, confidence_level, n_folds, on_invalid)
+    check_settings(target_agreement, confidence_level, n_folds, on_invalid, threshold_method)
     data = prepare_training_data(
         texts, llm_labels, labels=labels, n_folds=n_folds, on_invalid=on_invalid
     )
@@ -47,14 +62,19 @@ def distill(
 
     oof_proba, weights, intercept = cross_fit(x, y, len(data.label_set), n_folds, random_state)
     agrees = oof_proba.argmax(axis=1) == y
-    threshold = select_threshold(
-        oof_proba.max(axis=1).tolist(), agrees.tolist(), target_agreement, confidence_level
+    threshold = choose_threshold(
+        threshold_method,
+        oof_proba.max(axis=1).tolist(),
+        agrees.tolist(),
+        target_agreement,
+        confidence_level,
     )
     if threshold == math.inf:
         warnings.warn(
             f"target_agreement={target_agreement} is not reachable at "
             f"confidence_level={confidence_level} on this data, so the router will always "
-            "return None; try a lower target, more data, or cleaner labels",
+            "return None; try a lower target, more data, cleaner labels, or "
+            'threshold_method="wilson"',
             UserWarning,
             stacklevel=2,
         )
@@ -68,13 +88,18 @@ def distill(
         embedder=DEFAULT_MODEL if embed is None else "custom",
         target_agreement=target_agreement,
         confidence_level=confidence_level,
+        threshold_method=threshold_method,
         training=data,
         oof_proba=oof_proba,
     )
 
 
 def check_settings(
-    target_agreement: float, confidence_level: float, n_folds: int, on_invalid: str
+    target_agreement: float,
+    confidence_level: float,
+    n_folds: int,
+    on_invalid: str,
+    threshold_method: str,
 ) -> None:
     """Reject invalid settings before any expensive work starts."""
     for name, value in [
@@ -89,6 +114,11 @@ def check_settings(
     if on_invalid not in get_args(InvalidPolicy):
         raise ValueError(
             f"on_invalid must be one of {list(get_args(InvalidPolicy))}, got {on_invalid!r}"
+        )
+    if threshold_method not in get_args(ThresholdMethod):
+        raise ValueError(
+            f"threshold_method must be one of {list(get_args(ThresholdMethod))}, "
+            f"got {threshold_method!r}"
         )
 
 

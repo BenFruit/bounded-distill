@@ -116,7 +116,11 @@ def run_target(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # an unreachable target shows up as threshold None
         router = distill(
-            [example.text for example in train], train_llm, target_agreement=target, embed=embed
+            [example.text for example in train],
+            train_llm,
+            target_agreement=target,
+            threshold_method="wilson",  # the README numbers; benchmarks.baselines compares both
+            embed=embed,
         )
     report = router.report()
     gold = router.evaluate(

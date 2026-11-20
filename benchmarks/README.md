@@ -38,10 +38,17 @@ uv run python -m benchmarks.suspects --dataset banking77
 uv run --env-file .env python -m benchmarks.teachers --dataset banking77 --embedder giga-embeddings:10b
 uv run python -m benchmarks.bound_check
 
-# 6. Latency of one prediction, and the chart
+# 6. Compare five ways to pick the threshold (fixed, no bound, Wilson, SGR) on every LLM,
+#    dataset and embedder
+uv run python -m benchmarks.baselines
+
+# 7. Latency of one prediction, and the chart
 uv run --env-file .env python -m benchmarks.latency
 uv run python -m benchmarks.chart
 ```
+
+`run` uses `threshold_method="wilson"`, the only method in 0.1, so the numbers in the main
+README stay reproducible. `baselines` compares it with the default, `"sgr"`.
 
 Datasets: `banking77` (Banking77, English, 77 intents) and `massive_ru` (MASSIVE 1.0,
 Russian, 59 intents; the one intent with only 4 train texts is left out). Each script takes

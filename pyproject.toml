@@ -37,6 +37,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.24",
     "scikit-learn>=1.3",
+    "scipy>=1.5",  # already required by scikit-learn; used for the Clopper-Pearson bound
     "sentence-transformers>=3.0",
 ]
 

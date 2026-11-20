@@ -10,7 +10,11 @@ from synthetic import fake_embed, make_dataset
 from bounded_distill._distill import distill
 from bounded_distill._report import ClassStats, Report, build_report, median_latency_ms
 from bounded_distill._router import Router
-from bounded_distill._threshold import wilson_lower_bound
+from bounded_distill._threshold import (
+    clopper_pearson_lower_bound,
+    sgr_test_level,
+    wilson_lower_bound,
+)
 from bounded_distill._types import TrainingData
 
 # Six texts, worked out by hand. With threshold 0.6, rows 0, 1, 2, 4, 5 are covered;
@@ -42,6 +46,7 @@ def _build(threshold: float = 0.6) -> Report:
         threshold=threshold,
         target_agreement=0.5,
         confidence_level=0.9,
+        threshold_method="wilson",
         student_latency_ms=1.5,
     )
 
@@ -88,6 +93,7 @@ def test_build_report_sorts_disagreements_by_count() -> None:
         threshold=0.5,
         target_agreement=0.5,
         confidence_level=0.9,
+        threshold_method="wilson",
         student_latency_ms=1.0,
     )
     assert report.disagreements == (("b", "a", 2), ("a", "b", 1))
@@ -145,7 +151,7 @@ def test_str_shows_a_readable_summary() -> None:
         [
             "bounded-distill report",
             "  texts:      7 total, 6 used, 1 invalid (1 missing (None))",
-            "  target:     agreement >= 50.0% at 90% confidence: reached",
+            "  target:     agreement >= 50.0% at 90% confidence (wilson): reached",
             "  threshold:  0.6000",
             "  coverage:   83.3% (5 of 6 texts answered without the LLM)",
             "  agreement:  60.0% on answered texts, lower bound 33.0%",
@@ -198,3 +204,19 @@ def test_to_dict_names_disagreement_fields() -> None:
         {"llm_label": "a", "student_label": "b", "count": 1},
         {"llm_label": "c", "student_label": "a", "count": 1},
     ]
+
+
+def test_sgr_report_shows_the_bound_sgr_checked() -> None:
+    texts, labels = make_dataset(300, flip_rate=0.01)
+    router = distill(texts, labels, embed=fake_embed, target_agreement=0.9)
+    report = router.report()
+
+    assert router.oof_proba is not None
+    confidences = router.oof_proba.max(axis=1)
+    level = sgr_test_level(len(set(confidences.tolist())), 0.95)
+    k = round(report.agreement_covered * report.n_covered) if report.agreement_covered else 0
+    expected = clopper_pearson_lower_bound(k, report.n_covered, level)
+    assert report.threshold_method == "sgr"
+    assert report.agreement_covered_lower == pytest.approx(expected)
+    assert report.agreement_covered_lower >= 0.9
+    assert "confidence (sgr): reached" in str(report)

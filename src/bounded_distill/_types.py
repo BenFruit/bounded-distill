@@ -15,6 +15,9 @@ EmbedFn = Callable[[Sequence[str]], FloatArray]
 InvalidPolicy = Literal["drop", "warn", "error"]
 """What to do with invalid LLM labels: drop silently, drop with a warning, or raise."""
 
+ThresholdMethod = Literal["sgr", "wilson"]
+"""How the threshold is chosen: "sgr" with a strict guarantee, "wilson" for more coverage."""
+
 InvalidReason = Literal["missing", "empty", "unknown"]
 """Why an LLM label is invalid: None, empty/whitespace-only, or not in the label set."""
 
