@@ -4,6 +4,9 @@ scikit-learn ships no type stubs, so pyright strict reports every call as partia
 Instead of scattering ignores across the code base, the relaxed rules below apply to this
 file only, and every function converts results to precisely typed numpy arrays before
 returning them.
+
+scikit-learn is imported inside the function that uses it: importing it takes about two
+seconds, and a router that only predicts (for example one loaded from disk) never needs it.
 """
 
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
@@ -11,8 +14,6 @@ returning them.
 
 import numpy as np
 import numpy.typing as npt
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold
 
 _MAX_ITER = 1000
 
@@ -37,6 +38,9 @@ def cross_fit(
     class indices ``0 .. n_classes - 1``; every class must have at least ``n_folds`` rows,
     so each training split contains every class and the columns line up with the indices.
     """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import StratifiedKFold
+
     proba = np.zeros((len(y), n_classes), dtype=np.float64)
     weights: list[npt.NDArray[np.float64]] = []
     intercepts: list[npt.NDArray[np.float64]] = []

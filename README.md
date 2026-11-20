@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/assets/logo-dark.svg">
-    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/assets/logo-light.svg" width="350">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/assets/logo-dark.svg">
+    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/assets/logo-light.svg" width="350">
   </picture>
 </p>
 
@@ -173,12 +173,12 @@ The charts and the first two tables use Gemma 4 31B and `threshold_method="wilso
 method in 0.1. The section after them compares the two methods.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_dark.png">
-  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/banking77_dark.png">
+  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/banking77_light.png">
 </picture>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/massive_ru_dark.png">
-  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/massive_ru_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/massive_ru_dark.png">
+  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/massive_ru_light.png">
 </picture>
 
 Note that the y-axes are zoomed in. On these test sets, 0.3 points is about ten texts.
@@ -321,7 +321,7 @@ fallback. This one is different in a few ways:
 - [x] Release 0.1.0 on PyPI
 - [x] Four LLMs in the benchmark, and a check of the bound on new data
 - [x] A threshold with a strict guarantee (SGR) as the default, compared with other methods
-- [ ] Release 0.2
+- [x] Release 0.2.0 on PyPI
 - [ ] Optional online mode that collects examples from a running pipeline
 
 ## Contributing

@@ -223,8 +223,8 @@ src/bounded_distill/
   __init__.py      # public exports: distill, Router, Report, ClassStats, Suspect, GoldReport,
                    # EmbedFn, InvalidPolicy
   _types.py        # EmbedFn, InvalidPolicy, TrainingData and other small shared types
-  _sklearn.py      # the only module that imports scikit-learn: cross_fit returns the
-                   # out-of-fold probabilities and the fold models
+  _sklearn.py      # the only module that imports scikit-learn, lazily: cross_fit returns
+                   # the out-of-fold probabilities and the fold models
   _embed.py        # default embedder (sentence-transformers, loaded lazily)
   _threshold.py    # wilson_lower_bound and select_threshold, both pure functions
   _distill.py      # input validation, cross-validation, distill()

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-20)
 
 Changed:
 
@@ -9,6 +9,8 @@ Changed:
   The router may answer a few percent less traffic than in 0.1. To get the 0.1 behavior,
   pass `threshold_method="wilson"`.
 - With SGR, `Report.agreement_covered_lower` is the Clopper-Pearson bound that SGR checked.
+- `import bounded_distill` takes about 0.3 s instead of 2.4 s. scikit-learn is loaded on
+  the first `distill()` call, so a router loaded from disk to predict never imports it.
 - `scipy` is now a listed dependency. scikit-learn already needed it, so nothing new is
   installed.
 
