@@ -1,0 +1,30 @@
+[
+  {
+    "teacher": "gemma-4:31b",
+    "error_rate": 0.15916594265855777,
+    "systematic": 0.4934497816593887,
+    "shared_by_all": 0.6031659388646288,
+    "same_label_by_all": 0.2718340611353712
+  },
+  {
+    "teacher": "qwen3-4b",
+    "error_rate": 0.33344917463075585,
+    "systematic": 0.4622199062011464,
+    "shared_by_all": 0.28791036998436687,
+    "same_label_by_all": 0.12975508077123502
+  },
+  {
+    "teacher": "gpt-oss-120b",
+    "error_rate": 0.19756733275412686,
+    "systematic": 0.45690413368513627,
+    "shared_by_all": 0.4859278803869833,
+    "same_label_by_all": 0.21899736147757257
+  },
+  {
+    "teacher": "kimi-k2.6",
+    "error_rate": 0.16594265855777585,
+    "systematic": 0.4790575916230366,
+    "shared_by_all": 0.5785340314136126,
+    "same_label_by_all": 0.2607329842931937
+  }
+]

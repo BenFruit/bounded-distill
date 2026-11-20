@@ -9,6 +9,9 @@ endpoint in a ``.env`` file (never committed):
 
 Then, for example:
 ``uv run --env-file .env python -m benchmarks.label --dataset banking77 --split test --limit 50``
+
+Teachers are known by a short public name, which also names their cache and result files. If
+your server calls a model differently, pass its id with ``--server-model``.
 """
 
 import argparse
@@ -18,15 +21,37 @@ import random
 import time
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
-from openai import OpenAI
+from openai import OpenAI, omit
 from openai.types.shared_params import ResponseFormatJSONSchema
 
 from benchmarks.data import CACHE_DIR, DATASETS, Example, Split
 
+
+@dataclass(frozen=True)
+class Teacher:
+    """An LLM that labels the benchmark, and the request settings it needs.
+
+    Reasoning models spend tokens on thinking before the answer. With the default token limit
+    they return an empty answer, so thinking is turned off where the model allows it
+    (``thinking=False``) and kept short with a larger limit where it does not.
+    """
+
+    model: str  # the model id sent to the server
+    max_tokens: int = 50
+    thinking: bool | None = None  # None leaves the server's default
+    reasoning_effort: Literal["low", "medium", "high"] | None = None
+
+
+TEACHERS: dict[str, Teacher] = {
+    "gemma-4:31b": Teacher("gemma-4:31b"),
+    "qwen3-4b": Teacher("Qwen/Qwen3-4B-Instruct-2507"),
+    "gpt-oss-120b": Teacher("gpt-oss:120b", max_tokens=2000, reasoning_effort="low"),
+    "kimi-k2.6": Teacher("moonshotai/Kimi-K2.6", thinking=False),
+}
 DEFAULT_MODEL = "gemma-4:31b"
 
 
@@ -79,25 +104,28 @@ def parse_label(raw: str, labels: Sequence[str]) -> str | None:
 
 
 def label_one(
-    client: OpenAI, model: str, task: str, labels: Sequence[str], example: Example
+    client: OpenAI, teacher: Teacher, task: str, labels: Sequence[str], example: Example
 ) -> Labeled:
     """Ask the LLM for one text's label, deterministically (temperature 0)."""
+    thinking = None if teacher.thinking is None else {"enable_thinking": teacher.thinking}
     completion = client.chat.completions.create(
-        model=model,
+        model=teacher.model,
         messages=[
             {"role": "system", "content": system_prompt(task, labels)},
             {"role": "user", "content": example.text},
         ],
         response_format=response_format(labels),
         temperature=0,
-        max_tokens=50,
+        max_tokens=teacher.max_tokens,
+        reasoning_effort=teacher.reasoning_effort or omit,
+        extra_body=None if thinking is None else {"chat_template_kwargs": thinking},
     )
     raw = completion.choices[0].message.content or ""
     return Labeled(id=example.id, label=parse_label(raw, labels), raw=raw)
 
 
 def cache_path(model: str, dataset: str) -> Path:
-    """One JSON-lines file per model and dataset, e.g. ``.cache/labels/gemma-4_31b/...``."""
+    """One JSON-lines file per teacher name and dataset, e.g. ``.cache/labels/gemma-4_31b/...``."""
     return CACHE_DIR / "labels" / model.replace(":", "_").replace("/", "_") / f"{dataset}.jsonl"
 
 
@@ -111,7 +139,7 @@ def read_cache(path: Path) -> dict[str, Labeled]:
 
 def label_all(
     client: OpenAI,
-    model: str,
+    teacher: Teacher,
     task: str,
     labels: Sequence[str],
     examples: Sequence[Example],
@@ -129,7 +157,9 @@ def label_all(
     cache.parent.mkdir(parents=True, exist_ok=True)
     failed = 0
     with cache.open("a", encoding="utf-8") as file, ThreadPoolExecutor(workers) as pool:
-        futures = [pool.submit(label_one, client, model, task, labels, example) for example in todo]
+        futures = [
+            pool.submit(label_one, client, teacher, task, labels, example) for example in todo
+        ]
         for i, future in enumerate(as_completed(futures), start=1):
             try:
                 result = future.result()
@@ -162,7 +192,8 @@ def summary(examples: Sequence[Example], labeled: dict[str, Labeled], seconds: f
 def main() -> None:
     parser = argparse.ArgumentParser(description="Label benchmark texts with an LLM.")
     parser.add_argument("--dataset", choices=list(DATASETS), default="banking77")
-    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--model", choices=list(TEACHERS), default=DEFAULT_MODEL)
+    parser.add_argument("--server-model", help="the model id on your server, if it differs")
     parser.add_argument("--split", choices=["train", "test"], default="test")
     parser.add_argument("--limit", type=int, help="label a fixed random sample of this size")
     parser.add_argument("--workers", type=int, default=4, help="parallel requests")
@@ -174,11 +205,15 @@ def main() -> None:
     if args.limit is not None:
         examples = random.Random(0).sample(examples, args.limit)
 
+    teacher = TEACHERS[args.model]
+    if args.server_model is not None:
+        teacher = replace(teacher, model=args.server_model)
+
     client = OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"])
     start = time.perf_counter()
     labeled = label_all(
         client,
-        args.model,
+        teacher,
         dataset.task,
         dataset.labels(),
         examples,

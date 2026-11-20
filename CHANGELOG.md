@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+No changes to the library.
+
+- The benchmark now has four LLMs: Gemma 4 31B, Qwen3-4B-Instruct, gpt-oss-120b and
+  Kimi-K2.6. The results for all of them are in the README.
+- New benchmark scripts: `teachers.py` compares the LLMs' mistakes, and `bound_check.py` tests
+  the promised agreement on the test texts of every run.
+- `label.py` takes per-model request settings, needed for reasoning models, and a
+  `--server-model` option.
+
 ## 0.1.1 (2026-11-19)
 
 No code changes.

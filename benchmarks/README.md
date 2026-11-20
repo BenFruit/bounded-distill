@@ -33,7 +33,12 @@ uv run --env-file .env python -m benchmarks.run --dataset banking77 --embedder g
 # 4. Compare suspects with the human labels
 uv run python -m benchmarks.suspects --dataset banking77
 
-# 5. Latency of one prediction, and the chart
+# 5. Compare the LLMs' mistakes (needs at least two labeled LLMs), and test the bound on
+#    every saved run
+uv run --env-file .env python -m benchmarks.teachers --dataset banking77 --embedder giga-embeddings:10b
+uv run python -m benchmarks.bound_check
+
+# 6. Latency of one prediction, and the chart
 uv run --env-file .env python -m benchmarks.latency
 uv run python -m benchmarks.chart
 ```
@@ -45,5 +50,13 @@ Russian, 59 intents; the one intent with only 4 train texts is left out). Each s
 Downloads, LLM labels and embeddings are cached in `benchmarks/.cache/` (git-ignored).
 Results (metrics only, no texts) are written to `benchmarks/results/`.
 
-The default teacher is `gemma-4:31b` (Gemma 4 31B); pass `--model` to `label` and `--llm` to
-`run` for another one. Model names are those your server uses.
+The LLMs that label the data are listed in `TEACHERS` in `label.py`, by short names:
+`gemma-4:31b` (the default), `qwen3-4b`, `gpt-oss-120b` and `kimi-k2.6`. Pass the name with
+`--model` to `label` and with `--llm` to `run`, `suspects` and the other scripts. The name
+also names the cache and the result files. If your server calls the model differently, add
+`--server-model <id>` when labeling.
+
+Reasoning models need their own request settings. With a small token limit they spend it all
+on thinking and return an empty answer, so `label.py` turns thinking off where the model
+allows it (Qwen, Kimi) and asks for low effort with a larger limit where it doesn't
+(gpt-oss).

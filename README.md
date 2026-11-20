@@ -155,12 +155,15 @@ I tested the library on two intent classification datasets that have human label
 - MASSIVE, Russian part: voice assistant commands, 59 intents, 11,510 train and 2,974 test
   texts.
 
-The LLM was Gemma 4 31B, self-hosted on vLLM. It got the list of label names in the
-prompt and had to answer with one of them, no examples. Like any LLM in production, it makes
-mistakes: its accuracy against the human labels is 78.5% on Banking77 and 83.6% on MASSIVE.
+Four LLMs labeled the texts, all self-hosted on vLLM: Gemma 4 31B, Qwen3-4B-Instruct,
+gpt-oss-120b and Kimi-K2.6. Each got the list of label names in the prompt and had to answer
+with one of them, no examples. Like any LLM in production, they make mistakes: their accuracy
+against the human labels is 67% to 83% on Banking77 and 66% to 84% on MASSIVE.
 
 The router was trained only on the LLM's labels for the train texts. The human labels were
 used only at the end, to check the router on test texts it had never seen.
+
+The charts and the first table use Gemma 4 31B.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.1.1/benchmarks/results/banking77_dark.png">
@@ -182,35 +185,49 @@ With `target_agreement=0.97`:
 | MASSIVE ru | multilingual-e5-small (default) | 26.2% | 96.9% | 83.7% | 83.6% |
 | MASSIVE ru | Giga-Embeddings 10B (via `embed=`) | 66.6% | 97.3% | 84.2% | 83.6% |
 
+All four LLMs with Giga-Embeddings and `target_agreement=0.97`, accuracy against the human
+labels on test:
+
+| LLM | Banking77: traffic without the LLM | Banking77: combination / LLM alone | MASSIVE ru: traffic without the LLM | MASSIVE ru: combination / LLM alone |
+|---|---|---|---|---|
+| Qwen3-4B-Instruct | 50.5% | 67.5% / 66.7% | 36.4% | 66.6% / 66.1% |
+| Gemma 4 31B | 76.1% | 79.3% / 78.5% | 66.6% | 84.2% / 83.6% |
+| Kimi-K2.6 | 74.8% | 81.0% / 80.3% | 66.9% | 83.8% / 82.8% |
+| gpt-oss-120b | 79.4% | 83.9% / 82.9% | 59.5% | 80.5% / 79.2% |
+
 One prediction takes about 13 ms with e5-small on a laptop CPU and 55 ms with
-Giga-Embeddings on a GPU server, network included. One LLM call took 117 ms.
+Giga-Embeddings on a GPU server, network included. One Gemma call took 117 ms.
 
 What I took away from it:
 
-- The report can be trusted on new data. The coverage measured on test was within 1.7
-  points of what the report predicted, in all 18 runs. Agreement reached the target in 14 of
-  them. The other four fell short by up to 1.1 points, which is within the measurement noise
-  for test sets of this size.
-- The embedder matters most. With a stronger one the small model answers 2.5 to 3 times as
-  much traffic at the same target. At 0.97 the combination is as accurate as the LLM alone
-  with either embedder, and with Giga-Embeddings it is a bit more accurate at every target:
-  the small model averages over similar texts and smooths out some of the LLM's random
-  mistakes.
-- Suspects find real LLM mistakes. With Giga-Embeddings, 75 of the top 100 suspects on
-  Banking77 and 87 on MASSIVE were texts the LLM got wrong, while only 24% and 16% of all
-  texts were. Usually the small model also suggested the correct label. With e5-small the
-  numbers were lower, 39 and 55 out of 100. Some of these "LLM mistakes" are actually mistakes
-  in the human labels.
-- Between 40% and 70% of the LLM's mistakes are consistent ones. The small model learns them
-  and agrees with the LLM, so no agreement metric can catch them. You need human labels for
-  that, which is what `evaluate()` is for.
+- The bound holds on new data. Over 16 runs (4 LLMs, 2 datasets, 2 embedders) there are 75
+  reachable targets. The test agreement was below the target in 18 of them, by up to 1.1
+  points, but only once was it significantly below, which is fewer than the 5% that 95%
+  confidence allows. The coverage measured on test was within 3.3 points of what the report
+  predicted.
+- The combination was a little more accurate than the LLM alone for every LLM and dataset,
+  by 0.5 to 1.3 points at 0.97. The small model averages over similar texts and smooths out
+  some of the LLM's random mistakes. With the weakest LLM this goes further: at 0.90 the small
+  model answers 78% of Banking77 and the combination is 2.4 points more accurate than the LLM.
+- The embedder matters most. With a stronger one the small model answers 2 to 6 times as
+  much traffic at the same target.
+- Suspects find real LLM mistakes. With Giga-Embeddings, 75 to 94 of the top 100 suspects were
+  texts the LLM got wrong, for every LLM, while only 16% to 37% of all texts were. With
+  e5-small and Gemma the numbers were lower, 39 and 55 out of 100.
+- Many of the LLM's mistakes are consistent ones: 60% to 69% on Banking77 and 46% to 49% on
+  MASSIVE, about the same for all four LLMs. The small model learns them and agrees with the
+  LLM, so no agreement metric can catch them. You need human labels for that, which is what
+  `evaluate()` is for.
+- Not every "LLM mistake" is one. On 7% of the Banking77 train texts and 4% of the MASSIVE
+  ones, all four LLMs chose the same label and the human label was different. Looking through
+  some of them, most are ambiguous between two intents, and quite a few human labels are simply
+  wrong. So accuracy against human labels understates how good all of these models are.
 
-Some caveats. So far there is only one LLM in the benchmark. Both datasets are part of the
-MTEB benchmark, so embedding models may have been trained on them; Giga-Embeddings doesn't
-publish its training data, so its numbers could be a bit optimistic. Latency depends on
-hardware, and the LLM server used here is fast, so the main saving is GPU time rather than wall
-time. Texts were embedded as they are, without the instruction prefix that Giga-Embeddings
-recommends for classification.
+Some caveats. Both datasets are part of the MTEB benchmark, so embedding models may have been
+trained on them; Giga-Embeddings doesn't publish its training data, so its numbers could be a
+bit optimistic. Latency depends on hardware, and the LLM server used here is fast, so the main
+saving is GPU time rather than wall time. Texts were embedded as they are, without the
+instruction prefix that Giga-Embeddings recommends for classification.
 
 Scripts to reproduce all of this are in
 [benchmarks/](https://github.com/BenFruit/bounded-distill/blob/main/benchmarks/README.md).
@@ -247,7 +264,7 @@ fallback. This one is different in a few ways:
 - Agreement with the LLM is not accuracy. If the LLM keeps making the same mistake, the
   small model learns it too. Check with human labels.
 - The threshold is chosen and evaluated on the same out-of-fold data, so the bound is a bit
-  optimistic. In the benchmark the misses on new texts stayed within the noise.
+  optimistic. In the benchmark only 1 of 75 targets was significantly missed on new texts.
 - Only single-label classification with a fixed set of labels.
 - When the small model answers, you get just the label, not the other fields your pipeline's
   structured output may have.
@@ -260,7 +277,7 @@ fallback. This one is different in a few ways:
 - [x] Evaluation against human labels
 - [x] Benchmark on Banking77 and Russian MASSIVE with real LLM labels
 - [x] Release 0.1.0 on PyPI
-- [ ] More LLMs in the benchmark
+- [x] Four LLMs in the benchmark, and a check of the bound on new data
 - [ ] Optional online mode that collects examples from a running pipeline
 
 ## Contributing

@@ -15,7 +15,7 @@ from openai import OpenAI
 
 from benchmarks.data import DATASETS
 from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
-from benchmarks.label import label_one
+from benchmarks.label import TEACHERS, label_one
 from benchmarks.run import Vectors, api_embed, embeddings, llm_labels, lookup_embed
 from bounded_distill import distill
 from bounded_distill._embed import DEFAULT_MODEL, default_embed
@@ -58,7 +58,8 @@ def main() -> None:
     client = OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"])
     by_text = {example.text: example for example in test}
     llm_ms = median_ms(
-        lambda text: label_one(client, DEFAULT_LLM, dataset.task, labels, by_text[text]), texts
+        lambda text: label_one(client, TEACHERS[DEFAULT_LLM], dataset.task, labels, by_text[text]),
+        texts,
     )
     print(f"LLM call, {DEFAULT_LLM}: {llm_ms:.1f} ms")
 

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from benchmarks.data import DATASETS, Dataset, Example
 from benchmarks.label import DEFAULT_MODEL as DEFAULT_LLM
 from benchmarks.run import embeddings, llm_labels, lookup_embed
-from bounded_distill import Suspect, distill
+from bounded_distill import EmbedFn, Suspect, distill
 from bounded_distill._embed import DEFAULT_MODEL
 
 RANKS = (50, 100, 500, 1000)
@@ -39,19 +39,31 @@ def precision_at(suspects: Sequence[Suspect], gold: Sequence[str], top: int) -> 
     )
 
 
+def all_suspects(
+    train: Sequence[Example], train_llm: Sequence[str | None], embed: EmbedFn
+) -> list[Suspect]:
+    """Every text where the out-of-fold student disagrees with the LLM, most confident first."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        router = distill([e.text for e in train], train_llm, embed=embed)
+    return router.suspects(top_n=len(train))  # all of them; the threshold is not used
+
+
+def llm_errors(train: Sequence[Example], train_llm: Sequence[str | None]) -> set[int]:
+    """Positions of the train texts whose LLM label differs from gold."""
+    return {i for i, (e, llm) in enumerate(zip(train, train_llm, strict=True)) if llm != e.gold}
+
+
 def analyse(
     dataset: Dataset, train: Sequence[Example], train_llm: Sequence[str | None], embedder: str
 ) -> str:
     """Train a router on the LLM labels and compare its suspects with the gold labels."""
     everything = [*train, *dataset.load("test")]
     embed = lookup_embed(everything, embeddings(dataset.name, everything, embedder))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        router = distill([e.text for e in train], train_llm, embed=embed)
-    suspects = router.suspects(top_n=len(train))  # all of them; the threshold is not used
+    suspects = all_suspects(train, train_llm, embed)
     gold = [e.gold for e in train]
 
-    errors = {i for i, (llm, g) in enumerate(zip(train_llm, gold, strict=True)) if llm != g}
+    errors = llm_errors(train, train_llm)
     caught = errors & {s.index for s in suspects}
     lines = [
         f"embedder: {embedder}",

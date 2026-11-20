@@ -118,8 +118,10 @@ For `n = 0`, `lb = 0`.
 ### Known limitations
 
 - The threshold is chosen and evaluated on the same out-of-fold data, and choosing the best of
-  many candidates makes the bound a little optimistic. A separate calibration split may come
-  later if it turns out to matter.
+  many candidates makes the bound a little optimistic. In the benchmark (4 LLMs, 2 datasets,
+  2 embedders, 75 reachable targets) the test agreement was significantly below the target
+  only once, fewer than the 5% that 95% confidence allows. A separate calibration split may
+  come later if it turns out to matter.
 - The average of the fold models is a bit smoother than any single fold model, so its
   confidences are close to the out-of-fold ones but not identical. Step 6 has the measured
   effect.
