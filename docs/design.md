@@ -6,8 +6,8 @@ covers the offline mode, where the LLM labels already exist. An online mode is o
 ## 1. Goal
 
 Take texts and the labels an LLM pipeline already gave them, and build a small, fast
-classifier plus a confidence threshold. On the texts the classifier answers, agreement with
-the LLM should be at least `target_agreement`, with a stated statistical confidence. For
+classifier plus a confidence threshold. We aim for at least `target_agreement` on the texts
+the classifier answers. The confidence level is nominal for the deployed router. For
 everything below the threshold the classifier returns `None`, and the caller uses their own
 LLM pipeline. The library never calls an LLM.
 
@@ -99,13 +99,12 @@ Intended use: `if (label := router.predict(text)) is None: label = my_pipeline(t
      2017). A binary search over the candidates plus "cover nothing" looks for the lowest
      `t` whose exact one-sided Clopper-Pearson lower bound of `k / n` reaches the target. It
      tests at most `m = ceil(log2(candidates + 1))` thresholds, and each test runs at level
-     `1 - (1 - confidence_level) / m`. By the union bound the returned threshold meets the
-     target with probability at least `confidence_level`. The search assumes agreement mostly
-     grows with the threshold; when it doesn't, it can miss a narrow window of good
-     thresholds and return a higher one, which errs on the safe side.
+      `1 - (1 - confidence_level) / m`. Counting the realized search steps is not
+      a union bound over a fixed set of tests. The search can skip passing thresholds when
+      the lower bound is not monotone.
    - `select_threshold` (`"wilson"`): the lowest `t` whose one-sided Wilson lower bound at
      `confidence_level` reaches the target, checked at every candidate. It gives more
-     coverage, but the many checks are not corrected for, so the guarantee is approximate.
+      coverage in the benchmark, but the many checks are not corrected for.
    - If no candidate qualifies, `threshold = math.inf`: the router always returns `None`, the
      report says the target can't be reached, and a `UserWarning` is emitted. No exception.
 6. Prediction uses the `n_folds` models from step 3: the probabilities for a new text are their
@@ -130,19 +129,20 @@ For `n = 0`, `lb = 0`.
 ### Clopper-Pearson one-sided lower bound
 
 The exact bound: `lb = Beta.ppf(1 − confidence_level, k, n − k + 1)`, the quantile of a beta
-distribution, and `lb = 0` for `k = 0`. It never undercovers, so it is a little more
-conservative than Wilson. It comes from scipy, which scikit-learn already depends on, and
+distribution, and `lb = 0` for `k = 0`. For a fixed binomial test its coverage is at
+least the nominal level. It comes from scipy, which scikit-learn already depends on, and
 is imported only when SGR runs.
 
 ### Known limitations
 
-- With `"wilson"`, choosing the best of many candidates makes the bound a little optimistic.
-  SGR corrects for it. In the benchmark (4 LLMs, 2 datasets, 2 embedders, 80 cases per
+- Wilson scans all candidates without a correction. SGR uses a smaller per-test budget,
+  but its adaptive search and the out-of-fold setup do not establish error control.
+  In the benchmark (4 LLMs, 2 datasets, 2 embedders, 80 cases per
   method) the test agreement was significantly below the target once with Wilson and never
   with SGR, while Wilson answered 2.5 points more traffic on average.
 - The out-of-fold predictions come from k models that each saw most of the data, and the
   router averages them. The threshold is chosen on the first and applied to the second.
-  The benchmark shows this works, but it is not part of the formal guarantee.
+  Their scores can differ. A threshold passing the rule is not a guarantee for future data.
 - The average of the fold models is a bit smoother than any single fold model, so its
   confidences are close to the out-of-fold ones but not identical. Step 6 has the measured
   effect.
@@ -271,7 +271,7 @@ Small pure functions, no class hierarchies, no extension points.
 - `n_folds` and `random_state` are keyword arguments. `n_folds` is also the number of models
   the router averages, and `random_state` makes runs reproducible.
 
-- `threshold_method="sgr"` is the default since 0.2. A strict guarantee by default is worth
-  a few points of coverage; users who want the coverage choose `"wilson"` knowingly.
+- `threshold_method="sgr"` is the default since 0.2. It traded some coverage for fewer
+  below-target cases in the benchmark. Neither rule certifies deployed agreement.
 
 Still open for later versions: per-class thresholds, an online mode.

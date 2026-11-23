@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.1 (2026-11-23)
+
+No code changes, so routers and results behave exactly as in 0.2.0.
+
+Corrected:
+
+- 0.2.0 called `threshold_method="sgr"` a strict guarantee. That was wrong. SGR's
+  guarantee assumes independent agreement indicators from one fixed model chosen on a
+  separate calibration set. Here the indicators are out-of-fold scores from five fold
+  models that share training data, the search over thresholds is adaptive, and the router
+  that answers new texts is the average of the fold models. So the confidence level is
+  nominal for both methods. The README, the design doc, the changelog wording and the
+  docstrings now say so.
+
+Documentation:
+
+- The README notes that 208 of the 2,974 MASSIVE-ru test texts also occur in its train
+  split, which makes the MASSIVE-ru numbers slightly optimistic.
+- The benchmark adds `benchmarks/audit.py`, the blind audit of errors shared by all four
+  LLMs, with its results. The annotators are two LLMs, not people.
+
 ## 0.2.0 (2026-11-20)
 
 Changed:

@@ -42,6 +42,11 @@ uv run python -m benchmarks.bound_check
 #    dataset and embedder
 uv run python -m benchmarks.baselines
 
+# 6b. Blind audit of the errors shared by all LLMs: write the blind items, let two
+#     annotators answer them (files in benchmarks/.cache/audit/), then score
+uv run python -m benchmarks.audit sample --dataset banking77
+uv run python -m benchmarks.audit score --dataset banking77
+
 # 7. Latency of one prediction, and the chart
 uv run --env-file .env python -m benchmarks.latency
 uv run python -m benchmarks.chart

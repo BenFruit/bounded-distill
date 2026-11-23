@@ -1,10 +1,8 @@
-"""Does the promised agreement hold on unseen texts? A test over every saved benchmark run.
+"""Compare observed agreement with the target on the saved benchmark test splits.
 
-The router promises that the true agreement with the LLM on the texts it answers is at least
-the target, at 95% confidence. On the test split each run gives ``k`` agreements out of ``n``
-covered texts. If even the one-sided 95% upper bound of that agreement is below the target,
-the test data contradict the promise. With an honest bound this happens in at most about 5%
-of runs. A point estimate a little below the target is expected and is not a violation.
+Each run gives ``k`` agreements out of ``n`` covered texts. Flag the run if the one-sided
+95% Wilson upper bound is below the target. These are descriptive test-set checks.
+Runs can share examples and predictions; the count is not a guarantee failure rate.
 Run: ``uv run python -m benchmarks.bound_check``
 """
 
@@ -12,6 +10,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from benchmarks.data import DATASETS
 from benchmarks.run import RESULTS_DIR
 from bounded_distill._threshold import wilson_lower_bound
 
@@ -56,7 +55,7 @@ def checks(path: Path) -> list[Check]:
 
 
 def main() -> None:
-    paths = sorted(p for p in RESULTS_DIR.glob("*.json") if not p.name.startswith("teachers_"))
+    paths = sorted(path for dataset in DATASETS for path in RESULTS_DIR.glob(f"{dataset}_*.json"))
     all_checks = [c for path in paths for c in checks(path)]
     below = [c for c in all_checks if c.below_target]
     violated = [c for c in all_checks if c.violated]

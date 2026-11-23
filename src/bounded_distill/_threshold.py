@@ -4,10 +4,11 @@ Two ways to pick the threshold:
 
 - ``select_threshold``: the lowest threshold whose Wilson lower bound reaches the target,
   checked at every candidate. It gives the most coverage, but the many checks are not
-  corrected for, so the guarantee is approximate.
+  corrected for.
 - ``select_threshold_sgr``: Selection with Guaranteed Risk (Geifman and El-Yaniv, 2017). A
   binary search tests a few candidates, each with an exact Clopper-Pearson bound at a
-  confidence level split between the tests, so the guarantee holds for the chosen threshold.
+  nominal error budget split between the steps. This does not give a guarantee for
+  the chosen threshold on dependent out-of-fold predictions.
 """
 
 import math
@@ -20,8 +21,8 @@ from bounded_distill._types import ThresholdMethod
 def wilson_lower_bound(k: int, n: int, confidence_level: float) -> float:
     """One-sided Wilson score lower bound for a binomial proportion.
 
-    With probability ``confidence_level`` the true proportion is at least the returned value,
-    given ``k`` successes out of ``n`` trials. Returns 0.0 when ``n == 0``.
+    The nominal coverage for binomial trials is ``confidence_level``. Actual coverage is
+    approximate. Returns 0.0 when ``n == 0``.
     """
     if not 0 <= k <= n:
         raise ValueError(f"need 0 <= k <= n, got k={k}, n={n}")
@@ -40,8 +41,8 @@ def wilson_lower_bound(k: int, n: int, confidence_level: float) -> float:
 def clopper_pearson_lower_bound(k: int, n: int, confidence_level: float) -> float:
     """One-sided exact (Clopper-Pearson) lower bound for a binomial proportion.
 
-    With probability at least ``confidence_level`` the true proportion is at least the
-    returned value, given ``k`` successes out of ``n`` trials. Returns 0.0 when ``k == 0``,
+    For binomial trials and a fixed test, coverage is at least ``confidence_level``.
+    Returns 0.0 when ``k == 0``,
     which includes ``n == 0``. More conservative than the Wilson bound.
     """
     if not 0 <= k <= n:
@@ -99,9 +100,9 @@ def select_threshold_sgr(
     increasing order. A binary search looks for the lowest candidate whose Clopper-Pearson
     lower bound of agreement reaches ``target_agreement``. It tests at most
     ``ceil(log2(number of candidates))`` thresholds, and each test uses the error budget
-    ``1 - confidence_level`` divided by that number, so by the union bound the chosen
-    threshold meets the target with probability at least ``confidence_level``. Like the
-    original, the search assumes agreement mostly grows with the threshold.
+    ``1 - confidence_level`` divided by that number. Counting the realized adaptive
+    path does not establish a fixed-family union bound. The search can skip
+    passing candidates when agreement is not monotone in confidence.
     """
     _check_inputs(confidences, agrees, target_agreement)
     if not 0 < confidence_level < 1:

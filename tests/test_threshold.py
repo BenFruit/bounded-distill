@@ -216,7 +216,7 @@ def test_sgr_never_splits_tied_confidences() -> None:
 
 @pytest.mark.parametrize("seed", range(20))
 def test_sgr_threshold_is_never_below_wilson(seed: int) -> None:
-    # SGR pays for its guarantee with a higher threshold, i.e. less coverage. Sometimes it
+    # The smaller per-test error budget can lead to a higher threshold. Sometimes it
     # finds no threshold at all (math.inf) where Wilson does: that errs on the safe side.
     rng = np.random.default_rng(seed)
     confidences = [round(float(c), 3) for c in rng.uniform(0.3, 1.0, 2000)]

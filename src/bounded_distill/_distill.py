@@ -37,19 +37,21 @@ def distill(
 ) -> Router:
     """Train a small classifier on LLM labels and pick its confidence threshold.
 
-    The threshold is chosen on out-of-fold predictions so that agreement with the LLM on
-    the answered texts is at least ``target_agreement`` with probability ``confidence_level``:
+    Choose a threshold whose out-of-fold agreement score passes the lower-bound rule
+    at the nominal ``confidence_level``:
 
-    - ``threshold_method="sgr"`` (default): Selection with Guaranteed Risk (Geifman and
-      El-Yaniv, 2017), a binary search with exact Clopper-Pearson bounds corrected for the
-      number of thresholds it tests. The guarantee is strict.
+    - ``threshold_method="sgr"`` (default): an SGR-style binary search (Geifman and
+      El-Yaniv, 2017) with Clopper-Pearson bounds and a nominal per-step error budget.
     - ``threshold_method="wilson"``: the lowest threshold whose Wilson lower bound reaches the
       target, checked at every candidate. More coverage, but the many checks are not
-      corrected for, so the guarantee is approximate.
+      corrected for.
+
+    Neither rule guarantees agreement for the deployed ensemble. Calibration uses one fold
+    model per row, these rows are dependent, and thresholds are selected from the data.
 
     If no threshold reaches the target, the router never answers (``threshold == math.inf``)
     and a ``UserWarning`` is emitted. The router predicts with the average of the
-    ``n_folds`` fold models, the same models the threshold was chosen on.
+    ``n_folds`` fold models, not the single-fold scores used to choose the threshold.
     """
     check_settings(target_agreement, confidence_level, n_folds, on_invalid, threshold_method)
     data = prepare_training_data(

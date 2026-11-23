@@ -12,7 +12,7 @@ from bounded_distill._report import ClassStats, GoldReport, Report, Suspect
 from bounded_distill._router import Router
 from bounded_distill._types import EmbedFn, InvalidPolicy, ThresholdMethod
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "ClassStats",

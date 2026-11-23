@@ -1,0 +1,1079 @@
+{
+  "dataset": "banking77",
+  "population": 714,
+  "n": 150,
+  "shares": {
+    "annotator1": {
+      "gold": 0.08666666666666667,
+      "teacher": 0.49333333333333335,
+      "both": 0.38666666666666666,
+      "neither": 0.03333333333333333
+    },
+    "annotator2": {
+      "gold": 0.07333333333333333,
+      "teacher": 0.5133333333333333,
+      "both": 0.34,
+      "neither": 0.07333333333333333
+    }
+  },
+  "consensus": {
+    "gold": 0.04666666666666667,
+    "teacher": 0.3933333333333333,
+    "both": 0.24666666666666667,
+    "neither": 0.02666666666666667
+  },
+  "agreement": 0.7133333333333334,
+  "kappa": 0.5273340172944454,
+  "items": [
+    {
+      "id": "banking77/train/4327",
+      "gold": "topping_up_by_card",
+      "teacher": "top_up_limits",
+      "annotator1": "neither",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/5681",
+      "gold": "Refund_not_showing_up",
+      "teacher": "request_refund",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/102",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/2754",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7286",
+      "gold": "transfer_fee_charged",
+      "teacher": "transfer_not_received_by_recipient",
+      "annotator1": "gold",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/7009",
+      "gold": "beneficiary_not_allowed",
+      "teacher": "declined_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/5160",
+      "gold": "pending_card_payment",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3227",
+      "gold": "top_up_reverted",
+      "teacher": "top_up_failed",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/6757",
+      "gold": "reverted_card_payment?",
+      "teacher": "declined_card_payment",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/4021",
+      "gold": "get_physical_card",
+      "teacher": "change_pin",
+      "annotator1": "gold",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/8162",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2524",
+      "gold": "card_payment_fee_charged",
+      "teacher": "exchange_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7226",
+      "gold": "transfer_fee_charged",
+      "teacher": "transfer_not_received_by_recipient",
+      "annotator1": "gold",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1828",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2856",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "pending_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1831",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "receiving_money",
+      "annotator1": "both",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/500",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8368",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "card_payment_wrong_exchange_rate",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2732",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "pending_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8048",
+      "gold": "order_physical_card",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "neither",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/8289",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1848",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3259",
+      "gold": "top_up_reverted",
+      "teacher": "top_up_failed",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/516",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/248",
+      "gold": "card_linking",
+      "teacher": "activate_my_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3871",
+      "gold": "why_verify_identity",
+      "teacher": "unable_to_verify_identity",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/6478",
+      "gold": "transaction_charged_twice",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8113",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/518",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/4004",
+      "gold": "get_physical_card",
+      "teacher": "change_pin",
+      "annotator1": "gold",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/5991",
+      "gold": "pending_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "neither",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3292",
+      "gold": "top_up_reverted",
+      "teacher": "transaction_charged_twice",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8339",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "card_payment_wrong_exchange_rate",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8668",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2022",
+      "gold": "pending_top_up",
+      "teacher": "top_up_failed",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8094",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/9595",
+      "gold": "card_about_to_expire",
+      "teacher": "country_support",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/6024",
+      "gold": "pending_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7360",
+      "gold": "receiving_money",
+      "teacher": "transfer_into_account",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2755",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "pending_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/175",
+      "gold": "card_linking",
+      "teacher": "activate_my_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8085",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/43",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/485",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/5036",
+      "gold": "declined_cash_withdrawal",
+      "teacher": "declined_card_payment",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8629",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/6",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "both",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8340",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "exchange_rate",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7105",
+      "gold": "beneficiary_not_allowed",
+      "teacher": "failed_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3892",
+      "gold": "unable_to_verify_identity",
+      "teacher": "verify_my_identity",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2701",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3805",
+      "gold": "why_verify_identity",
+      "teacher": "unable_to_verify_identity",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/176",
+      "gold": "card_linking",
+      "teacher": "activate_my_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1927",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_into_account",
+      "annotator1": "neither",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/8126",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2555",
+      "gold": "card_payment_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2687",
+      "gold": "card_payment_fee_charged",
+      "teacher": "disposable_card_limits",
+      "annotator1": "teacher",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/1835",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "receiving_money",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8066",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/6036",
+      "gold": "pending_transfer",
+      "teacher": "pending_card_payment",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/482",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/405",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3486",
+      "gold": "card_payment_not_recognised",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7258",
+      "gold": "transfer_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/7046",
+      "gold": "beneficiary_not_allowed",
+      "teacher": "exchange_via_app",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/663",
+      "gold": "extra_charge_on_statement",
+      "teacher": "pending_card_payment",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3217",
+      "gold": "top_up_reverted",
+      "teacher": "top_up_failed",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8090",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2976",
+      "gold": "supported_cards_and_currencies",
+      "teacher": "topping_up_by_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1322",
+      "gold": "card_not_working",
+      "teacher": "declined_card_payment",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8078",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/3876",
+      "gold": "why_verify_identity",
+      "teacher": "verify_my_identity",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8063",
+      "gold": "order_physical_card",
+      "teacher": "country_support",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2015",
+      "gold": "pending_top_up",
+      "teacher": "top_up_failed",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8292",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "card_payment_wrong_exchange_rate",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8634",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8216",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "exchange_rate",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2903",
+      "gold": "supported_cards_and_currencies",
+      "teacher": "topping_up_by_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/6029",
+      "gold": "pending_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8666",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8244",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "cash_withdrawal_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/9860",
+      "gold": "verify_my_identity",
+      "teacher": "why_verify_identity",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3298",
+      "gold": "top_up_reverted",
+      "teacher": "top_up_failed",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8144",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2698",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2960",
+      "gold": "supported_cards_and_currencies",
+      "teacher": "topping_up_by_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1916",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "top_up_by_card_charge",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1924",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "top_up_by_card_charge",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1922",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/82",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8761",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/6548",
+      "gold": "verify_source_of_funds",
+      "teacher": "balance_not_updated_after_bank_transfer",
+      "annotator1": "neither",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/210",
+      "gold": "card_linking",
+      "teacher": "activate_my_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/457",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1717",
+      "gold": "pin_blocked",
+      "teacher": "change_pin",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1851",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/99",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8665",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8632",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/4538",
+      "gold": "compromised_card",
+      "teacher": "lost_or_stolen_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7397",
+      "gold": "receiving_money",
+      "teacher": "transfer_into_account",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2836",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "pending_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7370",
+      "gold": "receiving_money",
+      "teacher": "fiat_currency_support",
+      "annotator1": "teacher",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/2674",
+      "gold": "card_payment_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2512",
+      "gold": "card_payment_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8219",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "cash_withdrawal_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/5680",
+      "gold": "Refund_not_showing_up",
+      "teacher": "request_refund",
+      "annotator1": "both",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8154",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2835",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/6057",
+      "gold": "pending_transfer",
+      "teacher": "transfer_not_received_by_recipient",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7104",
+      "gold": "beneficiary_not_allowed",
+      "teacher": "exchange_via_app",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/4018",
+      "gold": "get_physical_card",
+      "teacher": "change_pin",
+      "annotator1": "gold",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/415",
+      "gold": "card_payment_wrong_exchange_rate",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3795",
+      "gold": "why_verify_identity",
+      "teacher": "verify_my_identity",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/799",
+      "gold": "pending_cash_withdrawal",
+      "teacher": "pending_transfer",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/7016",
+      "gold": "beneficiary_not_allowed",
+      "teacher": "failed_transfer",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/3897",
+      "gold": "unable_to_verify_identity",
+      "teacher": "verify_my_identity",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1925",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "top_up_by_card_charge",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/2699",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/48",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "both",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/2820",
+      "gold": "transfer_not_received_by_recipient",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/834",
+      "gold": "pending_cash_withdrawal",
+      "teacher": "balance_not_updated_after_cheque_or_cash_deposit",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2536",
+      "gold": "card_payment_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/4074",
+      "gold": "get_physical_card",
+      "teacher": "change_pin",
+      "annotator1": "gold",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/1890",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "receiving_money",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8633",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/5803",
+      "gold": "Refund_not_showing_up",
+      "teacher": "request_refund",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8760",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8859",
+      "gold": "cash_withdrawal_not_recognised",
+      "teacher": "compromised_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1847",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2529",
+      "gold": "card_payment_fee_charged",
+      "teacher": "extra_charge_on_statement",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/116",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8050",
+      "gold": "order_physical_card",
+      "teacher": "get_physical_card",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/9018",
+      "gold": "exchange_charge",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/72",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/8635",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8724",
+      "gold": "balance_not_updated_after_bank_transfer",
+      "teacher": "transfer_timing",
+      "annotator1": "teacher",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/965",
+      "gold": "fiat_currency_support",
+      "teacher": "exchange_via_app",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/8276",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "exchange_rate",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/8474",
+      "gold": "top_up_failed",
+      "teacher": "top_up_limits",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/4073",
+      "gold": "get_physical_card",
+      "teacher": "change_pin",
+      "annotator1": "teacher",
+      "annotator2": "neither"
+    },
+    {
+      "id": "banking77/train/8210",
+      "gold": "wrong_exchange_rate_for_cash_withdrawal",
+      "teacher": "cash_withdrawal_charge",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/94",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "gold",
+      "annotator2": "gold"
+    },
+    {
+      "id": "banking77/train/58",
+      "gold": "card_arrival",
+      "teacher": "card_delivery_estimate",
+      "annotator1": "both",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1944",
+      "gold": "pending_top_up",
+      "teacher": "top_up_failed",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/1918",
+      "gold": "top_up_by_bank_transfer_charge",
+      "teacher": "transfer_fee_charged",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/1276",
+      "gold": "card_not_working",
+      "teacher": "declined_card_payment",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/6787",
+      "gold": "reverted_card_payment?",
+      "teacher": "card_not_working",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    },
+    {
+      "id": "banking77/train/2055",
+      "gold": "pending_top_up",
+      "teacher": "top_up_failed",
+      "annotator1": "both",
+      "annotator2": "both"
+    },
+    {
+      "id": "banking77/train/173",
+      "gold": "card_linking",
+      "teacher": "activate_my_card",
+      "annotator1": "teacher",
+      "annotator2": "teacher"
+    }
+  ]
+}

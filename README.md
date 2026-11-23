@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/assets/logo-dark.svg">
-    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/assets/logo-light.svg" width="350">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/assets/logo-dark.svg">
+    <img alt="bounded-distill" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/assets/logo-light.svg" width="350">
   </picture>
 </p>
 
@@ -14,9 +14,9 @@
   <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
 </p>
 
-Train a small, fast classifier on the labels your LLM already produced, and let it answer
-only when it agrees with the LLM often enough, with a statistical guarantee. Everything else
-goes back to the LLM.
+Train a small, fast classifier on the labels your LLM already produced. Use an agreement
+target to choose when it answers and when to fall back to the LLM. The threshold is an
+estimate from out-of-fold predictions, not a guarantee for future inputs.
 
 Status: alpha. It works and is tested and benchmarked, but the API may change before 1.0.
 
@@ -35,8 +35,8 @@ You pass in texts with the labels your LLM gave them (from your logs, for exampl
 target like "agree with the LLM at least 97% of the time". The library then:
 
 1. trains a small classifier: frozen sentence embeddings plus logistic regression;
-2. picks a confidence threshold so that, with 95% confidence, agreement on the texts it
-   answers meets your target, not just on average;
+2. picks a confidence threshold using a binomial lower-bound rule on out-of-fold
+   agreement, at a nominal confidence level of 95% by default;
 3. reports how much traffic the small model takes over, its agreement per class, and its
    latency;
 4. lists suspects: texts where the small model is confident but disagrees with the LLM.
@@ -85,10 +85,9 @@ The default embedder is `intfloat/multilingual-e5-small`: it handles many langua
 fine on a CPU. To use your own embeddings, pass `embed=`, a function that takes a list of
 texts and returns an `(n, dim)` array.
 
-There are two ways to pick the threshold. The default, `threshold_method="sgr"`, gives a
-strict guarantee. `threshold_method="wilson"` lets the small model answer a few percent more
-traffic, but its guarantee is only approximate. "How it works" below explains the
-difference, and the benchmark compares them.
+There are two ways to pick the threshold. The default, `threshold_method="sgr"`, uses a
+more conservative per-test rule. `threshold_method="wilson"` covered more traffic in
+the benchmark. Neither option gives a finite-sample guarantee for the deployed router.
 
 ## Reading the report
 
@@ -116,9 +115,9 @@ bounded-distill report
 ```
 
 Coverage is the share of texts the small model answers, which is also the share of LLM calls
-you save. The lower bound is what the threshold is based on: with 95% confidence, agreement
-on the answered texts is at least this high. If no threshold can reach the target, the
-router doesn't answer anything and the report tells you so.
+you save. The reported lower bound is the score used to choose the threshold. It is
+computed on out-of-fold predictions and is not a confidence interval for deployed
+agreement. If no candidate passes the rule, the router answers nothing.
 
 The per-class table shows what the total hides. Overall agreement is 93.9%, but the class
 `other` is only just above the 90% target. The bound is about all answered texts together,
@@ -173,12 +172,12 @@ The charts and the first two tables use Gemma 4 31B and `threshold_method="wilso
 method in 0.1. The section after them compares the two methods.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/banking77_dark.png">
-  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/banking77_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/benchmarks/results/banking77_dark.png">
+  <img alt="Banking77: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/benchmarks/results/banking77_light.png">
 </picture>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/massive_ru_dark.png">
-  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.0/benchmarks/results/massive_ru_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/benchmarks/results/massive_ru_dark.png">
+  <img alt="MASSIVE Russian: share of test traffic answered without the LLM against cascade accuracy, for two embedders and five target agreements" src="https://raw.githubusercontent.com/BenFruit/bounded-distill/v0.2.1/benchmarks/results/massive_ru_light.png">
 </picture>
 
 Note that the y-axes are zoomed in. On these test sets, 0.3 points is about ten texts.
@@ -207,12 +206,11 @@ Giga-Embeddings on a GPU server, network included. One Gemma call took 117 ms.
 
 What I took away from it:
 
-- The Wilson bound holds on new data. Over 16 runs (4 LLMs, 2 datasets, 2 embedders) there
+- The Wilson rule came close to the target on the test data. Over 16 runs there
   are 75 reachable targets. The test agreement was below the target in 18 of them, by up to
-  1.1 points, but only once was it significantly below, which is fewer than the 5% that 95%
-  confidence allows. The coverage measured on test was within 3.3 points of what the report
-  predicted.
-- The combination was a little more accurate than the LLM alone for every LLM and dataset,
+  1.1 points, but only once was it significantly below. These cases share predictions
+  and test rows. The coverage measured on test was within 3.3 points of the report estimate.
+- With Giga-Embeddings the combination was more accurate than the LLM alone in all eight cases,
   by 0.5 to 1.3 points at 0.97. The small model averages over similar texts and smooths out
   some of the LLM's random mistakes. With the weakest LLM this goes further: at 0.90 the small
   model answers 78% of Banking77 and the combination is 2.4 points more accurate than the LLM.
@@ -225,10 +223,9 @@ What I took away from it:
   MASSIVE, about the same for all four LLMs. The small model learns them and agrees with the
   LLM, so no agreement metric can catch them. You need human labels for that, which is what
   `evaluate()` is for.
-- Not every "LLM mistake" is one. On 7% of the Banking77 train texts and 4% of the MASSIVE
-  ones, all four LLMs chose the same label and the human label was different. Looking through
-  some of them, most are ambiguous between two intents, and quite a few human labels are simply
-  wrong. So accuracy against human labels understates how good all of these models are.
+- On about 7% of Banking77 and 4% of MASSIVE training texts, all four LLMs chose the same
+  non-gold label. A blind audit by two LLM annotators, not humans, often preferred the
+  teachers' label or found both plausible. The audit only covers that selected subset.
 
 ### Picking the threshold
 
@@ -248,16 +245,18 @@ the agreement on test was below the target, "broken" means significantly below.
   between 9% and 78% of the traffic depending on the LLM and the embedder, and broke the
   target in 13 of 16 runs at 0.99. At 0.9 it was safe but answered almost nothing.
 - Without a bound, the agreement on new texts fell below the target about half the time.
-- Wilson checks every candidate threshold without correcting for that, so its guarantee is
-  approximate. It answered 2.5 points more traffic than SGR on average, most at the strict
+- Wilson checks every candidate without a multiple-testing correction.
+  It answered 2.5 points more traffic than SGR on average, most at the strict
   0.99 target (22.5% against 17.8%), and broke the target once.
-- SGR (Selection with Guaranteed Risk, Geifman and El-Yaniv, 2017) corrects for the
-  thresholds it tests and never broke the target. In 4 of the 80 cases it found no threshold
-  at all where Wilson did, mostly at 0.99. That is the price of the strict guarantee.
+- The SGR-style rule (Geifman and El-Yaniv, 2017) had no significantly below-target case.
+  In 4 of the 80 cases it found no threshold where Wilson did. These counts do not measure
+  the probability of missing the target in deployment.
 
 Some caveats. Both datasets are part of the MTEB benchmark, so embedding models may have been
 trained on them; Giga-Embeddings doesn't publish its training data, so its numbers could be a
-bit optimistic. Latency depends on hardware, and the LLM server used here is fast, so the main
+bit optimistic. In MASSIVE-ru, 208 of the 2,974 test texts also occur word for word in the
+train split, 202 of them with the same human label, so the MASSIVE-ru numbers are slightly
+optimistic too. Banking77 has no such overlap. Latency depends on hardware, and the LLM server used here is fast, so the main
 saving is GPU time rather than wall time. Texts were embedded as they are, without the
 instruction prefix that Giga-Embeddings recommends for classification.
 
@@ -274,14 +273,14 @@ Scripts to reproduce all of this are in
    bound for that agreement. The lower the threshold, the more texts the small model answers.
    - `sgr` (default): a binary search over the candidates, as in Selection with Guaranteed
      Risk (Geifman and El-Yaniv, 2017). Each step uses the exact Clopper-Pearson bound, and
-     the 5% error budget is split between the steps, so the guarantee holds for the
-     threshold it returns.
+      uses a nominal per-step level. The search path is data-dependent, so counting
+      its steps does not establish a guarantee.
    - `wilson`: the lowest candidate whose Wilson bound reaches the target, checked at every
      candidate. Testing many thresholds without a correction makes the bound a little
      optimistic.
 4. If no threshold reaches the target, the router answers nothing and warns you.
-5. To predict, average the probabilities of the k models. These are the same models the
-   threshold was picked for, so it means the same thing on new texts. A prediction is one
+5. To predict, average the probabilities of the k models. Calibration instead uses one
+   fold model per row. A prediction is one
    embedding and a few small matrix multiplications in numpy.
 
 A saved router is a JSON file plus an `.npz` file. There is no pickle and no training text on
@@ -303,8 +302,9 @@ fallback. This one is different in a few ways:
 
 - Agreement with the LLM is not accuracy. If the LLM keeps making the same mistake, the
   small model learns it too. Check with human labels.
-- The guarantee is about all answered texts together. A single class can still be below the
-  target, so look at the per-class table.
+- Neither threshold rule certifies future agreement. Out-of-fold rows share training data,
+  and the deployed ensemble is not the same predictor as the one used to score each row.
+  The target is for answered texts as a group, not for every class.
 - With `threshold_method="wilson"` the bound is a bit optimistic, because many thresholds are
   tried without a correction. In the benchmark it broke the target in 1 of 80 cases.
 - Only single-label classification with a fixed set of labels.
@@ -320,8 +320,8 @@ fallback. This one is different in a few ways:
 - [x] Benchmark on Banking77 and Russian MASSIVE with real LLM labels
 - [x] Release 0.1.0 on PyPI
 - [x] Four LLMs in the benchmark, and a check of the bound on new data
-- [x] A threshold with a strict guarantee (SGR) as the default, compared with other methods
-- [x] Release 0.2.0 on PyPI
+- [x] An SGR-style threshold rule as the default, compared with other methods
+- [x] Release 0.2.0 on PyPI, and 0.2.1 with the corrected wording of the threshold rule
 - [ ] Optional online mode that collects examples from a running pipeline
 
 ## Contributing
